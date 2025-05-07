@@ -12,18 +12,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Sidebar: logo piccolo e menu a tendina
+# --- Sidebar con logo e menu ---
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:10px;">'
-    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="60"/>'
+    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="50"/>'
     '</div>',
     unsafe_allow_html=True
 )
-app_mode = st.sidebar.selectbox(
-    "", 
-    ["🔍 SEO Extractor", "🛠️ Altro Tool"],
-    index=0
-)
+app_mode = st.sidebar.selectbox("", ["🔍 SEO Extractor", "🛠️ Altro Tool"])
 
 BASE_HEADERS = {
     "User-Agent": (
@@ -55,8 +51,8 @@ def estrai_info(url: str):
     soup = BeautifulSoup(resp.text, "html.parser")
     return {
         "H1": soup.find("h1").get_text(strip=True) if soup.find("h1") else "",
-        "Title": soup.title.get_text(strip=True) if soup.title else "",
-        "Description": (
+        "Meta title": soup.title.get_text(strip=True) if soup.title else "",
+        "Meta description": (
             soup.find("meta", attrs={"name":"description"})["content"].strip()
             if soup.find("meta", attrs={"name":"description"}) and
                soup.find("meta", attrs={"name":"description"}).has_attr("content")
@@ -66,12 +62,15 @@ def estrai_info(url: str):
 
 if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
-    st.markdown("Incolla gli URL (uno per riga), scegli i campi e clicca **Avvia Estrazione**.")
+    st.markdown("Inserisci gli URL (uno per riga) e seleziona i campi da estrarre:")
 
-    urls_text = st.text_area("", height=200)
-    cb_h1    = st.checkbox("H1", value=True)
-    cb_title = st.checkbox("Title", value=True)
-    cb_desc  = st.checkbox("Description", value=True)
+    urls_text = st.text_area("", height=200, placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2")
+    fields = st.multiselect(
+        "Campi da estrarre",
+        ["H1", "Meta title", "Meta description"],
+        default=["H1", "Meta title", "Meta description"]
+    )
+
     if st.button("🚀 Avvia Estrazione"):
         urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
         if not urls:
@@ -83,12 +82,11 @@ if app_mode == "🔍 SEO Extractor":
                 for i, url in enumerate(urls, start=1):
                     info = estrai_info(url)
                     row = {"URL": url}
-                    if cb_h1:    row["H1"]          = info["H1"]
-                    if cb_title: row["Title"]       = info["Title"]
-                    if cb_desc:  row["Description"] = info["Description"]
+                    for f in fields:
+                        row[f] = info.get(f, "")
                     data.append(row)
                     progress.progress(i / len(urls))
-            st.success(f"Fatto! {len(urls)} URL analizzati.")
+            st.success(f"Fatto! Ho analizzato {len(urls)} URL.")
 
             df = pd.DataFrame(data)
             st.dataframe(df, use_container_width=True)
