@@ -80,28 +80,32 @@ if app_mode == "🔍 SEO Extractor":
     st.markdown("Estrai **H1**, **Meta title** e **Meta description** in modo rapido e intuitivo.")
     st.divider()
 
-    # Card contenente URL e selezione campi
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    col1, col2 = st.columns([2, 1], gap="large")
-    with col1:
-        st.markdown("**Incolla le URL (una per riga):**")
-        urls_text = st.text_area(
-            label="",
-            height=200,
-            placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
-            label_visibility="collapsed"
-        )
-    with col2:
-        st.markdown("**Campi da estrarre:**")
-        fields = st.pills(
-            "",
-            ["H1", "Meta title", "Meta description"],
-            selection_mode="multi",
-            default=[]
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
+    # gruppo in un container affinché HTML venga applicato correttamente
+    with st.container():
+        st.markdown('<div class="card">', unsafe_allow_html=True)
 
-    # Pulsante di estrazione sotto la card
+        col1, col2 = st.columns([2, 1], gap="large")
+        with col1:
+            st.markdown("**Incolla le URL (una per riga):**")
+            urls_text = st.text_area(
+                "",
+                height=200,
+                placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
+                label_visibility="collapsed"
+            )
+        with col2:
+            st.markdown("**Campi da estrarre:**")
+            fields = st.pills(
+                "",
+                ["H1", "Meta title", "Meta description"],
+                selection_mode="multi",
+                default=[]
+            )
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("")  # spazio prima del pulsante
+
     if st.button("🚀 Avvia Estrazione"):
         if not fields:
             st.error("❗ Seleziona almeno un campo da estrarre prima di procedere.")
