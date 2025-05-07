@@ -25,7 +25,7 @@ st.markdown("""
 # Sidebar con logo e menu
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
-    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
+    '<img src="https://i.ibb.co/PGzPQsDt/mflogo.png" width="40" />'
     '</div>',
     unsafe_allow_html=True
 )
