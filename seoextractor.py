@@ -12,20 +12,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Sidebar ---
-# Logo cliccabile
+# Sidebar: logo piccolo e menu a tendina
 st.sidebar.markdown(
-    '[<img src="https://i.ibb.co/0yMG6kDs/logo.png" alt="logo" border="0">](https://imgbb.com/)',
+    '<div style="text-align:center; margin-bottom:10px;">'
+    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="60"/>'
+    '</div>',
     unsafe_allow_html=True
 )
-
-st.sidebar.title("Menu")
-app_mode = st.sidebar.radio(
-    "Seleziona lo strumento:",
-    ["SEO Extractor", "Altro Tool"]
+app_mode = st.sidebar.selectbox(
+    "", 
+    ["🔍 SEO Extractor", "🛠️ Altro Tool"],
+    index=0
 )
 
-# --- Funzione di estrazione ---
 BASE_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) "
@@ -65,35 +64,31 @@ def estrai_info(url: str):
         )
     }
 
-# --- SEO Extractor UI ---
-if app_mode == "SEO Extractor":
+if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
-    st.markdown(
-        "Incolla una lista di URL (uno per riga) nel box qui sotto, "
-        "seleziona i campi da estrarre e clicca **Avvia Estrazione**."
-    )
+    st.markdown("Incolla gli URL (uno per riga), scegli i campi e clicca **Avvia Estrazione**.")
 
-    urls_text = st.text_area("URL (uno per riga)", height=200)
-    cols_h1    = st.checkbox("H1", value=True)
-    cols_title = st.checkbox("Title", value=True)
-    cols_desc  = st.checkbox("Description", value=True)
+    urls_text = st.text_area("", height=200)
+    cb_h1    = st.checkbox("H1", value=True)
+    cb_title = st.checkbox("Title", value=True)
+    cb_desc  = st.checkbox("Description", value=True)
     if st.button("🚀 Avvia Estrazione"):
         urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
         if not urls:
             st.error("Inserisci almeno un URL valido.")
         else:
             data = []
-            progress_bar = st.progress(0)
+            progress = st.progress(0)
             with st.spinner("Analisi in corso…"):
                 for i, url in enumerate(urls, start=1):
                     info = estrai_info(url)
                     row = {"URL": url}
-                    if cols_h1:    row["H1"]          = info["H1"]
-                    if cols_title: row["Title"]       = info["Title"]
-                    if cols_desc:  row["Description"] = info["Description"]
+                    if cb_h1:    row["H1"]          = info["H1"]
+                    if cb_title: row["Title"]       = info["Title"]
+                    if cb_desc:  row["Description"] = info["Description"]
                     data.append(row)
-                    progress_bar.progress(i / len(urls))
-            st.success(f"Fatto! Ho analizzato {len(urls)} URL.")
+                    progress.progress(i / len(urls))
+            st.success(f"Fatto! {len(urls)} URL analizzati.")
 
             df = pd.DataFrame(data)
             st.dataframe(df, use_container_width=True)
@@ -109,8 +104,6 @@ if app_mode == "SEO Extractor":
                 use_container_width=True
             )
 
-# --- Placeholder per altri tool ---
-elif app_mode == "Altro Tool":
+elif app_mode == "🛠️ Altro Tool":
     st.title("🛠️ Altro Tool")
-    st.info("Qui comparirà la UI del tuo secondo strumento.")
-    # ... aggiungi qui il codice per il secondo tool ...
+    st.info("Qui il contenuto del tuo secondo strumento.")
