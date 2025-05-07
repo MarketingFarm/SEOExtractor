@@ -12,10 +12,22 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# CSS per rendere rossa la progress bar e nascondere i label vuoti
+st.markdown("""
+    <style>
+      /* nasconde i label vuoti */
+      label[data-testid="stWidgetLabel"] { display: none !important; }
+      /* colora la progress bar come i pulsanti "primary" (#f63366) */
+      .stProgress > div > div > div {
+        background-color: #f63366 !important;
+      }
+    </style>
+""", unsafe_allow_html=True)
+
 # Sidebar con logo e menu
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
-    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40"/>'
+    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
     '</div>',
     unsafe_allow_html=True
 )
@@ -50,12 +62,10 @@ def estrai_info(url: str):
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    # Estrazione di H1, H2, title, description
     h1 = soup.find("h1")
     h2_texts = [h.get_text(strip=True) for h in soup.find_all("h2")]
     title = soup.title
     meta_desc = soup.find("meta", attrs={"name": "description"})
-    # Nuovi campi: canonical e meta robots
     canonical = soup.find("link", rel="canonical")
     meta_robots = soup.find("meta", attrs={"name": "robots"})
 
@@ -79,7 +89,7 @@ if app_mode == "🔍 SEO Extractor":
     with col1:
         st.markdown("**Incolla le URL (una per riga):**")
         urls_text = st.text_area(
-            label="",
+            "",
             height=200,
             placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
             label_visibility="collapsed"
@@ -111,7 +121,7 @@ if app_mode == "🔍 SEO Extractor":
                         for f in fields:
                             row[f] = info.get(f, "")
                         results.append(row)
-                        progress.progress(i / len(urls))
+                        progress.progress((i + 1) / len(urls))
                 st.success(f"✅ Ho analizzato {len(urls)} URL.")
                 st.balloons()
 
