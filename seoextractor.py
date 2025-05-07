@@ -12,19 +12,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS per rendere rossa la progress bar e nascondere i label vuoti
+# CSS per nascondere label vuoti e colorare la progress bar
 st.markdown("""
     <style>
-      /* nasconde i label vuoti */
       label[data-testid="stWidgetLabel"] { display: none !important; }
-      /* colora la progress bar come i pulsanti "primary" (#f63366) */
       .stProgress > div > div > div {
         background-color: #f63366 !important;
       }
     </style>
 """, unsafe_allow_html=True)
 
-# Sidebar con logo e menu
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
     '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
@@ -113,7 +110,8 @@ if app_mode == "🔍 SEO Extractor":
                 st.error("❗ Inserisci almeno un URL valido.")
             else:
                 results = []
-                progress = st.progress(0)
+                # inizializza il progress bar con max_value = numero di URL
+                progress = st.progress(0, max_value=len(urls))
                 with st.spinner("Analisi in corso…"):
                     for i, url in enumerate(urls, start=1):
                         info = estrai_info(url)
@@ -121,7 +119,7 @@ if app_mode == "🔍 SEO Extractor":
                         for f in fields:
                             row[f] = info.get(f, "")
                         results.append(row)
-                        progress.progress((i + 1) / len(urls))
+                        progress.progress(i)  # valore intero
                 st.success(f"✅ Ho analizzato {len(urls)} URL.")
                 st.balloons()
 
