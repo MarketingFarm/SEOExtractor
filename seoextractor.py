@@ -12,27 +12,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-if "fields" not in st.session_state:
-    st.session_state.fields = {
-        "H1": True,
-        "Meta title": True,
-        "Meta description": True
-    }
-
-def toggle(field):
-    st.session_state.fields[field] = not st.session_state.fields[field]
-
+# --- Sidebar con logo e menu ---
 st.sidebar.markdown(
-    '<div style="text-align:center; margin-bottom:10px;">'
-    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="50"/>'
+    '<div style="text-align:center; margin-bottom:20px;">'
+    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
     '</div>',
     unsafe_allow_html=True
 )
-
-app_mode = st.sidebar.selectbox(
-    "",
-    ["🔍 SEO Extractor", "🛠️ Altro Tool"]
-)
+app_mode = st.sidebar.selectbox("", ["🔍 SEO Extractor", "🛠️ Altro Tool"])
 
 BASE_HEADERS = {
     "User-Agent": (
@@ -75,56 +62,47 @@ def estrai_info(url: str):
 
 if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
-    st.markdown("Inserisci gli URL (uno per riga) e seleziona i campi da estrarre:")
+    st.markdown("Incolla gli URL (uno per riga) e scegli quali campi estrarre:")
 
-    urls_text = st.text_area("", height=200, placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2")
-    st.markdown("**Seleziona i campi da estrarre**")
-    cols = st.columns(3)
-    for i, field in enumerate(["H1", "Meta title", "Meta description"]):
-        style = "success" if st.session_state.fields[field] else "secondary"
-        cols[i].button(
-            field,
-            key=f"btn_{field}",
-            on_click=toggle,
-            args=(field,),
-            button_style=style,
-            use_container_width=True
-        )
+    urls_text = st.text_area("", height=200, placeholder="https://esempio.com/p1\nhttps://esempio.com/p2")
+    
+    # checkbox orizzontali con icona
+    c1, c2, c3 = st.columns(3)
+    extract_h1  = c1.checkbox("🔍 H1", value=True)
+    extract_tit = c2.checkbox("🏷️ Meta title", value=True)
+    extract_desc= c3.checkbox("📝 Meta description", value=True)
 
     if st.button("🚀 Avvia Estrazione"):
-        selected = [f for f, v in st.session_state.fields.items() if v]
-        if not selected:
-            st.error("Seleziona almeno un campo da estrarre.")
+        urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
+        if not urls:
+            st.error("Inserisci almeno un URL valido.")
         else:
-            urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
-            if not urls:
-                st.error("Inserisci almeno un URL valido.")
-            else:
-                data = []
-                progress = st.progress(0)
-                with st.spinner("Analisi in corso…"):
-                    for i, url in enumerate(urls, start=1):
-                        info = estrai_info(url)
-                        row = {"URL": url}
-                        for f in selected:
-                            row[f] = info[f]
-                        data.append(row)
-                        progress.progress(i / len(urls))
-                st.success(f"Fatto! {len(urls)} URL analizzati.")
+            data = []
+            progress = st.progress(0)
+            with st.spinner("Analisi in corso…"):
+                for i, url in enumerate(urls, start=1):
+                    info = estrai_info(url)
+                    row = {"URL": url}
+                    if extract_h1:   row["H1"]               = info["H1"]
+                    if extract_tit:  row["Meta title"]       = info["Meta title"]
+                    if extract_desc: row["Meta description"] = info["Meta description"]
+                    data.append(row)
+                    progress.progress(i / len(urls))
+            st.success(f"Fatto! {len(urls)} URL analizzati.")
 
-                df = pd.DataFrame(data)
-                st.dataframe(df, use_container_width=True)
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True)
 
-                buf = BytesIO()
-                df.to_excel(buf, index=False, engine="openpyxl")
-                buf.seek(0)
-                st.download_button(
-                    label="📥 Download XLSX",
-                    data=buf,
-                    file_name="estrazione_seo.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
+            buf = BytesIO()
+            df.to_excel(buf, index=False, engine="openpyxl")
+            buf.seek(0)
+            st.download_button(
+                label="📥 Download XLSX",
+                data=buf,
+                file_name="estrazione_seo.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
 
 elif app_mode == "🛠️ Altro Tool":
     st.title("🛠️ Altro Tool")
