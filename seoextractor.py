@@ -6,31 +6,16 @@ from io import BytesIO
 from urllib.parse import urlparse
 
 st.set_page_config(
-    page_title="Multi-Tool Dashboard",
-    page_icon="🔧",
+    page_title="SEO Extractor",
+    page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Nasconde label vuoti e definisce stile card
-st.markdown("""
-    <style>
-      label[data-testid="stWidgetLabel"] { display: none !important; }
-      .card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 16px;
-        background: #fff;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-      }
-    </style>
-""", unsafe_allow_html=True)
-
 # Sidebar con logo e menu
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
-    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
+    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40"/>'
     '</div>',
     unsafe_allow_html=True
 )
@@ -64,57 +49,60 @@ def estrai_info(url: str):
     resp = session.get(url, timeout=10)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
+
+    # Estrazione di H1, H2, title, description
+    h1 = soup.find("h1")
+    h2_texts = [h.get_text(strip=True) for h in soup.find_all("h2")]
+    title = soup.title
+    meta_desc = soup.find("meta", attrs={"name": "description"})
+    # Nuovi campi: canonical e meta robots
+    canonical = soup.find("link", rel="canonical")
+    meta_robots = soup.find("meta", attrs={"name": "robots"})
+
     return {
-        "H1": soup.find("h1").get_text(strip=True) if soup.find("h1") else "",
-        "Meta title": soup.title.get_text(strip=True) if soup.title else "",
-        "Meta description": (
-            soup.find("meta", attrs={"name":"description"})["content"].strip()
-            if soup.find("meta", attrs={"name":"description"}) and
-               soup.find("meta", attrs={"name":"description"}).has_attr("content")
-            else ""
-        )
+        "H1": h1.get_text(strip=True) if h1 else "",
+        "H2": " | ".join(h2_texts) if h2_texts else "",
+        "Meta title": title.get_text(strip=True) if title else "",
+        "Meta description": meta_desc["content"].strip() if meta_desc and meta_desc.has_attr("content") else "",
+        "Canonical": canonical["href"].strip() if canonical and canonical.has_attr("href") else "",
+        "Meta robots": meta_robots["content"].strip() if meta_robots and meta_robots.has_attr("content") else ""
     }
 
 if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
-    st.markdown("Estrai **H1**, **Meta title** e **Meta description** in modo rapido e intuitivo.")
+    st.markdown(
+        "Estrai **H1**, **H2**, **Meta title**, **Meta description**, **Canonical** e **Meta robots** in modo rapido e intuitivo."
+    )
     st.divider()
 
-    # gruppo in un container affinché HTML venga applicato correttamente
-    with st.container():
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+    col1, col2 = st.columns([2, 1], gap="large")
+    with col1:
+        st.markdown("**Incolla le URL (una per riga):**")
+        urls_text = st.text_area(
+            label="",
+            height=200,
+            placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
+            label_visibility="collapsed"
+        )
+    with col2:
+        st.markdown("**Campi da estrarre:**")
+        fields = st.pills(
+            "Seleziona",
+            ["H1", "H2", "Meta title", "Meta description", "Canonical", "Meta robots"],
+            selection_mode="multi",
+            default=[]
+        )
 
-        col1, col2 = st.columns([2, 1], gap="large")
-        with col1:
-            st.markdown("**Incolla le URL (una per riga):**")
-            urls_text = st.text_area(
-                "",
-                height=200,
-                placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
-                label_visibility="collapsed"
-            )
-        with col2:
-            st.markdown("**Campi da estrarre:**")
-            fields = st.pills(
-                "",
-                ["H1", "Meta title", "Meta description"],
-                selection_mode="multi",
-                default=[]
-            )
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("")  # spazio prima del pulsante
-
+    st.markdown("")  # spazio
     if st.button("🚀 Avvia Estrazione"):
         if not fields:
-            st.error("❗ Seleziona almeno un campo da estrarre prima di procedere.")
+            st.error("❗ Seleziona almeno un campo da estrarre.")
         else:
             urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
             if not urls:
                 st.error("❗ Inserisci almeno un URL valido.")
             else:
-                data = []
+                results = []
                 progress = st.progress(0)
                 with st.spinner("Analisi in corso…"):
                     for i, url in enumerate(urls, start=1):
@@ -122,12 +110,12 @@ if app_mode == "🔍 SEO Extractor":
                         row = {"URL": url}
                         for f in fields:
                             row[f] = info.get(f, "")
-                        data.append(row)
+                        results.append(row)
                         progress.progress(i / len(urls))
                 st.success(f"✅ Ho analizzato {len(urls)} URL.")
                 st.balloons()
 
-                df = pd.DataFrame(data)
+                df = pd.DataFrame(results)
                 st.dataframe(df, use_container_width=True)
 
                 buf = BytesIO()
