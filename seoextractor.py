@@ -12,7 +12,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Sidebar: small logo + app selector
+# init session state for field toggles
+if "fields" not in st.session_state:
+    st.session_state.fields = {
+        "H1": False,
+        "Meta title": False,
+        "Meta description": False
+    }
+
+def toggle(field):
+    st.session_state.fields[field] = not st.session_state.fields[field]
+
+# sidebar logo + app selector
 st.sidebar.markdown(
     '<div style="text-align:center; margin:10px 0;">'
     '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40">'
@@ -64,40 +75,31 @@ if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
     st.markdown("Questo tool estrae H1, Meta title e Meta description dalle pagine web che indichi.")
 
-    # Layout a due colonne: sinistra 2/3, destra 1/3
     col1, col2 = st.columns([2, 1])
-
     with col1:
-        st.markdown("**Incolla le URL (una per riga):**")
+        st.markdown("**Incolla le URL (una per riga) e seleziona i campi da estrarre:**")
         urls_text = st.text_area(
             "",
             height=200,
             placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2"
         )
-
     with col2:
-        st.markdown("**Campi da estrarre:**")
+        st.markdown("**Campi da estrarre**")
+        for field in ["H1", "Meta title", "Meta description"]:
+            selected = st.session_state.fields[field]
+            btn_type = "primary" if selected else "secondary"
+            st.button(
+                field,
+                key=f"btn_{field}",
+                type=btn_type,
+                on_click=toggle,
+                args=(field,),
+                use_container_width=True
+            )
 
-        # CSS per rendere le pills verticali
-        st.markdown("""
-            <style>
-            div[data-baseweb="tag-list"] {
-                flex-direction: column !important;
-                gap: 0.5rem;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-
-        fields = st.pills(
-            "",
-            ["H1", "Meta title", "Meta description"],
-            selection_mode="multi",
-            default=[]
-        )
-
-    # Pulsante di estrazione sotto le colonne
     if st.button("🚀 Avvia Estrazione"):
-        if not fields:
+        selected_fields = [f for f, v in st.session_state.fields.items() if v]
+        if not selected_fields:
             st.error("❗ Seleziona almeno un campo da estrarre.")
         else:
             urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
@@ -110,7 +112,7 @@ if app_mode == "🔍 SEO Extractor":
                     for i, url in enumerate(urls, start=1):
                         info = estrai_info(url)
                         row = {"URL": url}
-                        for f in fields:
+                        for f in selected_fields:
                             row[f] = info.get(f, "")
                         results.append(row)
                         progress.progress(i / len(urls))
