@@ -62,47 +62,51 @@ def estrai_info(url: str):
 
 if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
-    st.markdown("Incolla gli URL (uno per riga) e scegli quali campi estrarre:")
+    st.markdown("Incolla gli URL (uno per riga) e seleziona i campi da estrarre:")
 
-    urls_text = st.text_area("", height=200, placeholder="https://esempio.com/p1\nhttps://esempio.com/p2")
-    
-    # checkbox orizzontali con icona
-    c1, c2, c3 = st.columns(3)
-    extract_h1  = c1.checkbox("🔍 H1", value=True)
-    extract_tit = c2.checkbox("🏷️ Meta title", value=True)
-    extract_desc= c3.checkbox("📝 Meta description", value=True)
+    urls_text = st.text_area("", height=200, placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2")
+
+    # qui usiamo st.pills per la selezione multi
+    fields = st.pills(
+        "Campi da estrarre",
+        ["H1", "Meta title", "Meta description"],
+        selection_mode="multi",
+        default=["H1", "Meta title", "Meta description"]
+    )
 
     if st.button("🚀 Avvia Estrazione"):
-        urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
-        if not urls:
-            st.error("Inserisci almeno un URL valido.")
+        if not fields:
+            st.error("Seleziona almeno un campo da estrarre.")
         else:
-            data = []
-            progress = st.progress(0)
-            with st.spinner("Analisi in corso…"):
-                for i, url in enumerate(urls, start=1):
-                    info = estrai_info(url)
-                    row = {"URL": url}
-                    if extract_h1:   row["H1"]               = info["H1"]
-                    if extract_tit:  row["Meta title"]       = info["Meta title"]
-                    if extract_desc: row["Meta description"] = info["Meta description"]
-                    data.append(row)
-                    progress.progress(i / len(urls))
-            st.success(f"Fatto! {len(urls)} URL analizzati.")
+            urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
+            if not urls:
+                st.error("Inserisci almeno un URL valido.")
+            else:
+                data = []
+                progress = st.progress(0)
+                with st.spinner("Analisi in corso…"):
+                    for i, url in enumerate(urls, start=1):
+                        info = estrai_info(url)
+                        row = {"URL": url}
+                        for f in fields:
+                            row[f] = info.get(f, "")
+                        data.append(row)
+                        progress.progress(i / len(urls))
+                st.success(f"Fatto! {len(urls)} URL analizzati.")
 
-            df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True)
+                df = pd.DataFrame(data)
+                st.dataframe(df, use_container_width=True)
 
-            buf = BytesIO()
-            df.to_excel(buf, index=False, engine="openpyxl")
-            buf.seek(0)
-            st.download_button(
-                label="📥 Download XLSX",
-                data=buf,
-                file_name="estrazione_seo.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
+                buf = BytesIO()
+                df.to_excel(buf, index=False, engine="openpyxl")
+                buf.seek(0)
+                st.download_button(
+                    label="📥 Download XLSX",
+                    data=buf,
+                    file_name="estrazione_seo.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
 
 elif app_mode == "🛠️ Altro Tool":
     st.title("🛠️ Altro Tool")
