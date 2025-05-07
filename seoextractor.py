@@ -64,27 +64,23 @@ if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
     st.markdown("Incolla gli URL (uno per riga) e seleziona i campi da estrarre:")
 
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.markdown("**Incolla le URL (una per riga):**")
-        urls_text = st.text_area(
-            label="",
-            height=200,
-            placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
-            label_visibility="collapsed"
-        )
+    urls_text = st.text_area(
+        label="",
+        height=200,
+        placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
+        label_visibility="collapsed"
+    )
 
-    with col2:
-        st.markdown("**Campi da estrarre:**")
-        fields = st.pills(
-            label="",
-            options=["H1", "Meta title", "Meta description"],
-            selection_mode="multi",
-            default=[],
-            label_visibility="collapsed"
-        )
+    # st.pills senza default: tutti deselezionati all'avvio
+    fields = st.pills(
+        "Campi da estrarre",
+        ["H1", "Meta title", "Meta description"],
+        selection_mode="multi",
+        default=[]
+    )
 
     if st.button("🚀 Avvia Estrazione"):
+        # Avvisa se non è stata fatta alcuna selezione
         if not fields:
             st.error("❗ Seleziona almeno un campo da estrarre prima di procedere.")
         else:
@@ -102,7 +98,7 @@ if app_mode == "🔍 SEO Extractor":
                             row[f] = info.get(f, "")
                         data.append(row)
                         progress.progress(i / len(urls))
-                st.success(f"✅ Ho analizzato {len(urls)} URL.")
+                st.success(f"✅ Fatto! Ho analizzato {len(urls)} URL.")
 
                 df = pd.DataFrame(data)
                 st.dataframe(df, use_container_width=True)
