@@ -6,8 +6,8 @@ from io import BytesIO
 from urllib.parse import urlparse
 
 st.set_page_config(
-    page_title="Multi-Tool Dashboard",
-    page_icon="🔧",
+    page_title="SEO Extractor",
+    page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -62,25 +62,35 @@ def estrai_info(url: str):
 
 if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
-    st.markdown("Incolla gli URL (uno per riga) e seleziona i campi da estrarre:")
-
-    urls_text = st.text_area(
-        label="",
-        height=200,
-        placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
-        label_visibility="collapsed"
+    st.markdown(
+        """
+        **Ottieni in un click i principali elementi SEO delle tue pagine web!**  
+        Estrai facilmente:
+        - **H1**: il titolo principale visibile sulla pagina  
+        - **Meta title**: il titolo ottimizzato per i motori di ricerca  
+        - **Meta description**: la descrizione SEO usata nei risultati di ricerca  
+        """
     )
 
-    # st.pills senza default: tutti deselezionati all'avvio
-    fields = st.pills(
-        "Campi da estrarre",
-        ["H1", "Meta title", "Meta description"],
-        selection_mode="multi",
-        default=[]
-    )
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown("**Incolla gli URL (uno per riga):**")
+        urls_text = st.text_area(
+            "",
+            height=200,
+            placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
+            label_visibility="collapsed"
+        )
+    with col2:
+        st.markdown("**Campi da estrarre:**")
+        fields = st.pills(
+            "",
+            ["H1", "Meta title", "Meta description"],
+            selection_mode="multi",
+            default=[]
+        )
 
     if st.button("🚀 Avvia Estrazione"):
-        # Avvisa se non è stata fatta alcuna selezione
         if not fields:
             st.error("❗ Seleziona almeno un campo da estrarre prima di procedere.")
         else:
