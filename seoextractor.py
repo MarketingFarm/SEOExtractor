@@ -66,21 +66,22 @@ if app_mode == "🔍 SEO Extractor":
 
     urls_text = st.text_area("", height=200, placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2")
 
-    # qui usiamo st.pills per la selezione multi
+    # st.pills senza default: tutti deselezionati all'avvio
     fields = st.pills(
         "Campi da estrarre",
         ["H1", "Meta title", "Meta description"],
         selection_mode="multi",
-        default=["H1", "Meta title", "Meta description"]
+        default=[]
     )
 
     if st.button("🚀 Avvia Estrazione"):
+        # Avvisa se non è stata fatta alcuna selezione
         if not fields:
-            st.error("Seleziona almeno un campo da estrarre.")
+            st.error("❗ Seleziona almeno un campo da estrarre prima di procedere.")
         else:
             urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
             if not urls:
-                st.error("Inserisci almeno un URL valido.")
+                st.error("❗ Inserisci almeno un URL valido.")
             else:
                 data = []
                 progress = st.progress(0)
@@ -92,7 +93,7 @@ if app_mode == "🔍 SEO Extractor":
                             row[f] = info.get(f, "")
                         data.append(row)
                         progress.progress(i / len(urls))
-                st.success(f"Fatto! {len(urls)} URL analizzati.")
+                st.success(f"✅ Fatto! Ho analizzato {len(urls)} URL.")
 
                 df = pd.DataFrame(data)
                 st.dataframe(df, use_container_width=True)
