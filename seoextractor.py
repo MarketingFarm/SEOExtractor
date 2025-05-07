@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS per nascondere label vuoti e colorare la progress bar
+# CSS: nasconde label vuoti e colora la progress bar in rosso
 st.markdown("""
     <style>
       label[data-testid="stWidgetLabel"] { display: none !important; }
@@ -22,6 +22,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Sidebar con logo e menu
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
     '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
@@ -94,7 +95,7 @@ if app_mode == "🔍 SEO Extractor":
     with col2:
         st.markdown("**Campi da estrarre:**")
         fields = st.pills(
-            "Seleziona",
+            "",
             ["H1", "H2", "Meta title", "Meta description", "Canonical", "Meta robots"],
             selection_mode="multi",
             default=[]
@@ -110,8 +111,7 @@ if app_mode == "🔍 SEO Extractor":
                 st.error("❗ Inserisci almeno un URL valido.")
             else:
                 results = []
-                # inizializza il progress bar con max_value = numero di URL
-                progress = st.progress(0, max_value=len(urls))
+                progress = st.progress(0)  # percentuale 0-100
                 with st.spinner("Analisi in corso…"):
                     for i, url in enumerate(urls, start=1):
                         info = estrai_info(url)
@@ -119,7 +119,8 @@ if app_mode == "🔍 SEO Extractor":
                         for f in fields:
                             row[f] = info.get(f, "")
                         results.append(row)
-                        progress.progress(i)  # valore intero
+                        percent = int(i / len(urls) * 100)
+                        progress.progress(percent)
                 st.success(f"✅ Ho analizzato {len(urls)} URL.")
                 st.balloons()
 
