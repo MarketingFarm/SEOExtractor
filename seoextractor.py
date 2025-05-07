@@ -64,17 +64,30 @@ if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
     st.markdown("Questo tool estrae H1, Meta title e Meta description dalle pagine web che indichi.")
 
-    # Two columns: left 2/3, right 1/3
+    # Layout a due colonne: sinistra 2/3, destra 1/3
     col1, col2 = st.columns([2, 1])
+
     with col1:
-        st.markdown("**Incolla le URL (una per riga) e seleziona i campi da estrarre:**")
+        st.markdown("**Incolla le URL (una per riga):**")
         urls_text = st.text_area(
             "",
             height=200,
             placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2"
         )
+
     with col2:
-        st.markdown("**Campi da estrarre**")
+        st.markdown("**Campi da estrarre:**")
+
+        # CSS per rendere le pills verticali
+        st.markdown("""
+            <style>
+            div[data-baseweb="tag-list"] {
+                flex-direction: column !important;
+                gap: 0.5rem;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
         fields = st.pills(
             "",
             ["H1", "Meta title", "Meta description"],
@@ -82,7 +95,7 @@ if app_mode == "🔍 SEO Extractor":
             default=[]
         )
 
-    # Extraction button below columns
+    # Pulsante di estrazione sotto le colonne
     if st.button("🚀 Avvia Estrazione"):
         if not fields:
             st.error("❗ Seleziona almeno un campo da estrarre.")
