@@ -6,27 +6,16 @@ from io import BytesIO
 from urllib.parse import urlparse
 
 st.set_page_config(
-    page_title="SEO Extractor",
-    page_icon="🔍",
+    page_title="Multi-Tool Dashboard",
+    page_icon="🔧",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# init session state for field toggles
-if "fields" not in st.session_state:
-    st.session_state.fields = {
-        "H1": False,
-        "Meta title": False,
-        "Meta description": False
-    }
-
-def toggle(field):
-    st.session_state.fields[field] = not st.session_state.fields[field]
-
-# sidebar logo + app selector
+# --- Sidebar con logo e menu ---
 st.sidebar.markdown(
-    '<div style="text-align:center; margin:10px 0;">'
-    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40">'
+    '<div style="text-align:center; margin-bottom:20px;">'
+    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
     '</div>',
     unsafe_allow_html=True
 )
@@ -73,52 +62,39 @@ def estrai_info(url: str):
 
 if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
-    st.markdown("Questo tool estrae H1, Meta title e Meta description dalle pagine web che indichi.")
+    st.markdown("Incolla gli URL (uno per riga) e seleziona i campi da estrarre:")
 
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.markdown("**Incolla le URL (una per riga) e seleziona i campi da estrarre:**")
-        urls_text = st.text_area(
-            "",
-            height=200,
-            placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2"
-        )
-    with col2:
-        st.markdown("**Campi da estrarre**")
-        for field in ["H1", "Meta title", "Meta description"]:
-            selected = st.session_state.fields[field]
-            btn_type = "primary" if selected else "secondary"
-            st.button(
-                field,
-                key=f"btn_{field}",
-                type=btn_type,
-                on_click=toggle,
-                args=(field,),
-                use_container_width=True
-            )
+    urls_text = st.text_area("", height=200, placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2")
+
+    # qui usiamo st.pills per la selezione multi
+    fields = st.pills(
+        "Campi da estrarre",
+        ["H1", "Meta title", "Meta description"],
+        selection_mode="multi",
+        default=["H1", "Meta title", "Meta description"]
+    )
 
     if st.button("🚀 Avvia Estrazione"):
-        selected_fields = [f for f, v in st.session_state.fields.items() if v]
-        if not selected_fields:
-            st.error("❗ Seleziona almeno un campo da estrarre.")
+        if not fields:
+            st.error("Seleziona almeno un campo da estrarre.")
         else:
             urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
             if not urls:
-                st.error("❗ Inserisci almeno un URL valido.")
+                st.error("Inserisci almeno un URL valido.")
             else:
-                results = []
+                data = []
                 progress = st.progress(0)
                 with st.spinner("Analisi in corso…"):
                     for i, url in enumerate(urls, start=1):
                         info = estrai_info(url)
                         row = {"URL": url}
-                        for f in selected_fields:
+                        for f in fields:
                             row[f] = info.get(f, "")
-                        results.append(row)
+                        data.append(row)
                         progress.progress(i / len(urls))
-                st.success(f"✅ Ho analizzato {len(urls)} URL.")
+                st.success(f"Fatto! {len(urls)} URL analizzati.")
 
-                df = pd.DataFrame(results)
+                df = pd.DataFrame(data)
                 st.dataframe(df, use_container_width=True)
 
                 buf = BytesIO()
