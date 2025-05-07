@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Sidebar con logo e menu ---
+# Sidebar
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
     '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
@@ -63,24 +63,32 @@ def estrai_info(url: str):
 if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
     st.markdown("Estrai **H1**, **Meta title** e **Meta description** in modo rapido e intuitivo.")
+    st.divider()  # linea di separazione
 
-    urls_text = st.text_area(
-        label="",
-        height=200,
-        placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
-        label_visibility="collapsed"
-    )
+    col1, col2 = st.columns([2, 1], gap="large")
+    with col1:
+        st.markdown("**Incolla le URL (una per riga):**")
+        st.markdown("")  # spazio extra
+        urls_text = st.text_area(
+            "",
+            height=200,
+            placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2",
+            label_visibility="collapsed"
+        )
+    with col2:
+        st.markdown("**Campi da estrarre:**")
+        st.markdown("")  # spazio extra
+        fields = st.pills(
+            "",
+            ["H1", "Meta title", "Meta description"],
+            selection_mode="multi",
+            default=[]
+        )
 
-    fields = st.pills(
-        "Campi da estrarre",
-        ["H1", "Meta title", "Meta description"],
-        selection_mode="multi",
-        default=[]
-    )
-
-    if st.button("🚀 Avvia Estrazione"):
+    st.markdown("")  # spazio prima del pulsante
+    if st.button("🚀 Avvia Estrazione", use_container_width=False):
         if not fields:
-            st.error("❗ Seleziona almeno un campo da estrarre prima di procedere.")
+            st.error("❗ Seleziona almeno un campo da estrarre.")
         else:
             urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
             if not urls:
@@ -97,10 +105,12 @@ if app_mode == "🔍 SEO Extractor":
                         data.append(row)
                         progress.progress(i / len(urls))
                 st.success(f"✅ Fatto! Ho analizzato {len(urls)} URL.")
+                st.markdown("")  # spazio prima della tabella
 
                 df = pd.DataFrame(data)
                 st.dataframe(df, use_container_width=True)
 
+                st.markdown("")  # spazio prima del download
                 buf = BytesIO()
                 df.to_excel(buf, index=False, engine="openpyxl")
                 buf.seek(0)
@@ -109,7 +119,7 @@ if app_mode == "🔍 SEO Extractor":
                     data=buf,
                     file_name="estrazione_seo.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
+                    use_container_width=False
                 )
 
 elif app_mode == "🛠️ Altro Tool":
