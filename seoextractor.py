@@ -25,7 +25,7 @@ st.markdown("""
 # Sidebar con logo e menu
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
-    '<img src="https://i.ibb.co/PGzPQsDt/mflogo.png" width="120" />'
+    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
     '</div>',
     unsafe_allow_html=True
 )
@@ -111,13 +111,16 @@ if app_mode == "🔍 SEO Extractor":
                 st.error("❗ Inserisci almeno un URL valido.")
             else:
                 results = []
-                progress = st.progress(0)  # percentuale 0-100
+                progress = st.progress(0)
                 with st.spinner("Analisi in corso…"):
                     for i, url in enumerate(urls, start=1):
                         info = estrai_info(url)
                         row = {"URL": url}
                         for f in fields:
-                            row[f] = info.get(f, "")
+                            text = info.get(f, "")
+                            row[f] = text
+                            if f in ["Meta title", "Meta description"]:
+                                row[f + " length"] = len(text)
                         results.append(row)
                         percent = int(i / len(urls) * 100)
                         progress.progress(percent)
