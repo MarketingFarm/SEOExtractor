@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS: nasconde i label vuoti, definisce stile "card"
+# Nasconde label vuoti e definisce stile card
 st.markdown("""
     <style>
       label[data-testid="stWidgetLabel"] { display: none !important; }
@@ -27,7 +27,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar con logo e menu ---
+# Sidebar con logo e menu
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
     '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
@@ -80,7 +80,7 @@ if app_mode == "🔍 SEO Extractor":
     st.markdown("Estrai **H1**, **Meta title** e **Meta description** in modo rapido e intuitivo.")
     st.divider()
 
-    # card contenente URL + selezione campi
+    # Card contenente URL e selezione campi
     st.markdown('<div class="card">', unsafe_allow_html=True)
     col1, col2 = st.columns([2, 1], gap="large")
     with col1:
@@ -101,7 +101,7 @@ if app_mode == "🔍 SEO Extractor":
         )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("")  # piccolo spazio
+    # Pulsante di estrazione sotto la card
     if st.button("🚀 Avvia Estrazione"):
         if not fields:
             st.error("❗ Seleziona almeno un campo da estrarre prima di procedere.")
@@ -120,14 +120,12 @@ if app_mode == "🔍 SEO Extractor":
                             row[f] = info.get(f, "")
                         data.append(row)
                         progress.progress(i / len(urls))
-                st.success(f"✅ Fatto! Ho analizzato {len(urls)} URL.")
+                st.success(f"✅ Ho analizzato {len(urls)} URL.")
                 st.balloons()
-                st.markdown("")  # spazio prima tabella
 
                 df = pd.DataFrame(data)
                 st.dataframe(df, use_container_width=True)
 
-                st.markdown("")  # spazio prima download
                 buf = BytesIO()
                 df.to_excel(buf, index=False, engine="openpyxl")
                 buf.seek(0)
