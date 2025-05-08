@@ -12,33 +12,23 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS per hide empty labels e color progress bar
+# CSS: nasconde label vuoti e colora la progress bar
 st.markdown("""
-<style>
-  label[data-testid="stWidgetLabel"] { display: none !important; }
-  .stProgress > div > div > div { background-color: #f63366 !important; }
-</style>
+    <style>
+      label[data-testid="stWidgetLabel"] { display: none !important; }
+      .stProgress > div > div > div { background-color: #f63366 !important; }
+    </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar con logo + navigazione manuale ---
+# Sidebar: logo + navigation (using st.navigation)
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
-    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
+    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40"/>'
     '</div>',
     unsafe_allow_html=True
 )
 
-# Definizione menu raggruppato
-sections = {
-    "On-Page SEO": ["🔍 SEO Extractor", "🛠️ Altro Tool"],
-    "Technical SEO": ["🛠️ Altro Tool", "🛠️ Altro Tool"],
-    "Off-Page SEO": ["🛠️ Altro Tool", "🛠️ Altro Tool"],
-}
-
-section = st.sidebar.selectbox("Sezione", list(sections.keys()))
-tool = st.sidebar.selectbox("Strumento", sections[section])
-
-# Funzione di estrazione
+# Shared extraction logic
 BASE_HEADERS = {"User-Agent": "Mozilla/5.0"}
 def estrai_info(url):
     resp = requests.get(url, headers=BASE_HEADERS, timeout=10)
@@ -61,57 +51,66 @@ def estrai_info(url):
         "Meta robots": robots["content"].strip() if robots and robots.has_attr("content") else ""
     }
 
-# Pagine
-def page_seo_extractor():
+# Page functions
+def seo_extractor():
     st.title("🔍 SEO Extractor")
-    st.markdown("Estrai **H1**, **H2**, **Meta title**, **Meta description**, **Canonical** e **Meta robots**.")
+    st.markdown("Estrai **H1**, **H2**, **Meta title**, **Meta description**, **Canonical** e **Meta robots** rapidamente.")
     st.divider()
-
     col1, col2 = st.columns([2,1], gap="large")
     with col1:
         st.markdown("**Incolla le URL (una per riga):**")
-        urls_text = st.text_area("", height=200, placeholder="https://esempio.com/p1\nhttps://esempio.com/p2", label_visibility="collapsed")
+        urls = st.text_area("", height=200, placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2", label_visibility="collapsed")
     with col2:
         st.markdown("**Campi da estrarre:**")
         fields = st.pills("", list(estrai_info("https://www.example.com").keys()), selection_mode="multi", default=[])
 
     if st.button("🚀 Avvia Estrazione"):
         if not fields:
-            st.error("❗ Seleziona almeno un campo.")
+            st.error("❗ Seleziona almeno un campo da estrarre.")
             return
-        urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
-        if not urls:
+        url_list = [u.strip() for u in urls.splitlines() if u.strip()]
+        if not url_list:
             st.error("❗ Inserisci almeno un URL valido.")
             return
-
+        prog = st.progress(0)
         results = []
-        progress = st.progress(0)
         with st.spinner("Analisi in corso…"):
-            for i, url in enumerate(urls, start=1):
-                info = estrai_info(url)
-                row = {"URL": url}
+            for i, u in enumerate(url_list, 1):
+                info = estrai_info(u)
+                row = {"URL": u}
                 for f in fields:
                     row[f] = info[f]
                 results.append(row)
-                progress.progress(int(i/len(urls)*100))
-
-        st.success(f"✅ Analizzate {len(urls)} URL.")
+                prog.progress(int(i/len(url_list)*100))
+        st.success(f"✅ Ho analizzato {len(url_list)} URL.")
         st.balloons()
-
         df = pd.DataFrame(results)
         st.dataframe(df, use_container_width=True)
-
         buf = BytesIO()
         df.to_excel(buf, index=False, engine="openpyxl")
         buf.seek(0)
         st.download_button("📥 Download XLSX", data=buf, file_name="estrazione_seo.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-def page_altro():
+def placeholder_tool():
     st.title("🛠️ Altro Tool")
-    st.info("Contenuto del tool.")
+    st.info("Contenuto del tool placeholder.")
 
-# Router manuale
-if tool == "🔍 SEO Extractor":
-    page_seo_extractor()
-else:
-    page_altro()
+# Build navigation structure
+pages = {
+    "On-Page SEO": [
+        st.Page(seo_extractor, title="SEO Extractor"),
+        st.Page(placeholder_tool, title="Altro Tool")
+    ],
+    "Technical SEO": [
+        st.Page(placeholder_tool, title="Tool A"),
+        st.Page(placeholder_tool, title="Tool B")
+    ],
+    "Off-Page SEO": [
+        st.Page(placeholder_tool, title="Tool C"),
+        st.Page(placeholder_tool, title="Tool D")
+    ],
+}
+
+# Run navigation
+selected = st.navigation(pages, position="sidebar", expanded=True)
+selected.run()
