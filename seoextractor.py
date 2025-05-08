@@ -6,31 +6,32 @@ from io import BytesIO
 from urllib.parse import urlparse
 
 st.set_page_config(
-    page_title="SEO Extractor",
-    page_icon="🔍",
+    page_title="Multi-Tool Dashboard",
+    page_icon="🔧",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# CSS: nasconde label vuoti e colora la progress bar
+# --- Global CSS & Sidebar Logo ---
 st.markdown("""
     <style>
+      /* Nasconde i label vuoti */
       label[data-testid="stWidgetLabel"] { display: none !important; }
+      /* Colora la progress bar come i pulsanti "primary" */
       .stProgress > div > div > div {
         background-color: #f63366 !important;
       }
     </style>
 """, unsafe_allow_html=True)
 
-# Sidebar con logo e menu
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
     '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
     '</div>',
     unsafe_allow_html=True
 )
-app_mode = st.sidebar.selectbox("", ["🔍 SEO Extractor", "🛠️ Altro Tool"])
 
+# --- Shared extraction logic ---
 BASE_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) "
@@ -60,6 +61,7 @@ def estrai_info(url: str):
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
+    # Extract elements
     h1 = soup.find("h1")
     h2_texts = [h.get_text(strip=True) for h in soup.find_all("h2")]
     title = soup.title
@@ -78,10 +80,11 @@ def estrai_info(url: str):
         "Meta robots": meta_robots["content"].strip() if meta_robots and meta_robots.has_attr("content") else ""
     }
 
-if app_mode == "🔍 SEO Extractor":
+# --- Page 1: SEO Extractor ---
+def seo_extractor():
     st.title("🔍 SEO Extractor")
     st.markdown(
-        "> Estrai **H1**, **H2**, **Meta title** (e lunghezza), **Meta description** (e lunghezza), **Canonical** e **Meta robots**"
+        "Estrai **H1**, **H2**, **Meta title**, **Meta description**, **Canonical** e **Meta robots** in modo rapido e intuitivo."
     )
     st.divider()
 
@@ -103,43 +106,53 @@ if app_mode == "🔍 SEO Extractor":
             default=[]
         )
 
-    st.markdown("")  # spazio
+    st.markdown("")  # spacer
     if st.button("🚀 Avvia Estrazione"):
         if not fields:
             st.error("❗ Seleziona almeno un campo da estrarre.")
-        else:
-            urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
-            if not urls:
-                st.error("❗ Inserisci almeno un URL valido.")
-            else:
-                results = []
-                progress = st.progress(0)
-                with st.spinner("Analisi in corso…"):
-                    for i, url in enumerate(urls, start=1):
-                        info = estrai_info(url)
-                        row = {"URL": url}
-                        for f in fields:
-                            row[f] = info.get(f, "")
-                        results.append(row)
-                        pct = int(i / len(urls) * 100)
-                        progress.progress(pct)
-                st.success(f"✅ Ho analizzato {len(urls)} URL.")
-                st.balloons()
+            return
+        urls = [u.strip() for u in urls_text.splitlines() if u.strip()]
+        if not urls:
+            st.error("❗ Inserisci almeno un URL valido.")
+            return
 
-                df = pd.DataFrame(results)
-                st.dataframe(df, use_container_width=True)
+        results = []
+        progress = st.progress(0)
+        with st.spinner("Analisi in corso…"):
+            for i, url in enumerate(urls, start=1):
+                info = estrai_info(url)
+                row = {"URL": url}
+                for f in fields:
+                    row[f] = info.get(f, "")
+                results.append(row)
+                progress.progress(int(i / len(urls) * 100))
+        st.success(f"✅ Ho analizzato {len(urls)} URL.")
+        st.balloons()
 
-                buf = BytesIO()
-                df.to_excel(buf, index=False, engine="openpyxl")
-                buf.seek(0)
-                st.download_button(
-                    label="📥 Download XLSX",
-                    data=buf,
-                    file_name="estrazione_seo.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=False
-                )
+        df = pd.DataFrame(results)
+        st.dataframe(df, use_container_width=True)
 
-elif app_mode == "🛠️ Altro Tool":
+        buf = BytesIO()
+        df.to_excel(buf, index=False, engine="openpyxl")
+        buf.seek(0)
+        st.download_button(
+            label="📥 Download XLSX",
+            data=buf,
+            file_name="estrazione_seo.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=False
+        )
+
+# --- Page 2: Placeholder Altro Tool ---
+def altro_tool():
     st.title("🛠️ Altro Tool")
     st.info("Qui comparirà il contenuto del tuo secondo strumento.")
+
+# --- Navigation Setup ---
+pages = [
+    st.Page(seo_extractor, title="🔍 SEO Extractor", icon="🔍"),
+    st.Page(altro_tool,    title="🛠️ Altro Tool",       icon="🛠️")
+]
+
+selected_page = st.navigation(pages, position="sidebar", expanded=True)
+selected_page.run()
