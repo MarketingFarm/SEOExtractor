@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Global CSS: nasconde label vuoti e colora progress bar
+# CSS: nasconde label vuoti e colora la progress bar
 st.markdown("""
     <style>
       label[data-testid="stWidgetLabel"] { display: none !important; }
@@ -43,7 +43,7 @@ def estrai_info(url: str):
     segments = parsed.path.lstrip("/").split("/")
     lang_code = segments[0] if segments and "-" in segments[0] else ""
     headers = BASE_HEADERS.copy()
-    if "-" in lang_code and len(lang_code)==5:
+    if "-" in lang_code and len(lang_code) == 5:
         lang, region = lang_code.split("-")
         headers["Accept-Language"] = f"{lang}-{region.upper()},{lang};q=0.9"
     else:
@@ -97,7 +97,7 @@ def seo_extractor():
         st.markdown("**Campi da estrarre:**")
         fields = st.pills(
             "",
-            ["H1","H2","Meta title","Meta description","Canonical","Meta robots"],
+            ["H1", "H2", "Meta title", "Meta description", "Canonical", "Meta robots"],
             selection_mode="multi",
             default=[]
         )
@@ -116,11 +116,11 @@ def seo_extractor():
         with st.spinner("Analisi in corso…"):
             for i, url in enumerate(urls, start=1):
                 info = estrai_info(url)
-                row = {"URL":url}
+                row = {"URL": url}
                 for f in fields:
-                    row[f] = info.get(f,"")
+                    row[f] = info.get(f, "")
                 results.append(row)
-                progress.progress(int(i/len(urls)*100))
+                progress.progress(int(i / len(urls) * 100))
 
         st.success(f"✅ Ho analizzato {len(urls)} URL.")
         st.balloons()
@@ -140,15 +140,25 @@ def seo_extractor():
         )
 
 def placeholder_tool():
-    st.title("🛠️ Placeholder Tool")
-    st.info("Qui comparirà il contenuto del tuo secondo strumento.")
+    st.title("🛠️ Altro Tool")
+    st.info("Placeholder per il secondo strumento.")
 
-# --- Navigation grouping ---
-sections = {
-    "On-Page SEO": [seo_extractor, placeholder_tool],
-    "Technical SEO": [placeholder_tool, placeholder_tool],
-    "Off-Page SEO": [placeholder_tool, placeholder_tool]
+# Define pages grouped by section
+pages = {
+    "On-Page SEO": [
+        st.Page(seo_extractor, title="🔍 SEO Extractor"),
+        st.Page(placeholder_tool, title="🛠️ Altro Tool")
+    ],
+    "Technical SEO": [
+        st.Page(placeholder_tool, title="🛠️ Altro Tool"),
+        st.Page(placeholder_tool, title="🛠️ Altro Tool")
+    ],
+    "Off-Page SEO": [
+        st.Page(placeholder_tool, title="🛠️ Altro Tool"),
+        st.Page(placeholder_tool, title="🛠️ Altro Tool")
+    ]
 }
 
-current = st.navigation(sections, position="sidebar", expanded=True)
-current.run()
+# Navigation
+selected = st.navigation(pages, position="sidebar", expanded=True)
+selected.run()
