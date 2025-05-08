@@ -6,21 +6,21 @@ from io import BytesIO
 from urllib.parse import urlparse
 
 st.set_page_config(
-    page_title="SEO Extractor",
-    page_icon="🔍",
+    page_title="Multi-Tool Dashboard",
+    page_icon="🔧",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# CSS: nasconde label vuoti e colora la progress bar
+# Nascondi label vuoti e colora la progress bar
 st.markdown("""
-    <style>
-      label[data-testid="stWidgetLabel"] { display: none !important; }
-      .stProgress > div > div > div { background-color: #f63366 !important; }
-    </style>
+<style>
+  label[data-testid="stWidgetLabel"] { display: none !important; }
+  .stProgress > div > div > div { background-color: #f63366 !important; }
+</style>
 """, unsafe_allow_html=True)
 
-# Sidebar: logo + navigation (using st.navigation)
+# Sidebar: logo e menu raggruppato
 st.sidebar.markdown(
     '<div style="text-align:center; margin-bottom:20px;">'
     '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40"/>'
@@ -28,7 +28,27 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# Shared extraction logic
+# Definizione delle sezioni e dei tool
+menu = {
+    "On-Page SEO": {
+        "🔍 SEO Extractor": "seo",
+        "🛠️ Altro Tool": "tool1"
+    },
+    "Technical SEO": {
+        "🛠️ Tool A": "tool2",
+        "🛠️ Tool B": "tool3"
+    },
+    "Off-Page SEO": {
+        "🛠️ Tool C": "tool4",
+        "🛠️ Tool D": "tool5"
+    }
+}
+
+section = st.sidebar.selectbox("Sezione", list(menu.keys()))
+tool_key = st.sidebar.selectbox("Tool", list(menu[section].keys()))
+selected = menu[section][tool_key]
+
+# Funzioni dei tool
 BASE_HEADERS = {"User-Agent": "Mozilla/5.0"}
 def estrai_info(url):
     resp = requests.get(url, headers=BASE_HEADERS, timeout=10)
@@ -51,38 +71,34 @@ def estrai_info(url):
         "Meta robots": robots["content"].strip() if robots and robots.has_attr("content") else ""
     }
 
-# Page functions
-def seo_extractor():
+def run_seo_extractor():
     st.title("🔍 SEO Extractor")
-    st.markdown("Estrai **H1**, **H2**, **Meta title**, **Meta description**, **Canonical** e **Meta robots** rapidamente.")
+    st.markdown("Estrai H1, H2, Meta title/length, Meta description/length, Canonical e Meta robots.")
     st.divider()
     col1, col2 = st.columns([2,1], gap="large")
     with col1:
-        st.markdown("**Incolla le URL (una per riga):**")
-        urls = st.text_area("", height=200, placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2", label_visibility="collapsed")
+        urls = st.text_area("Incolla URL (una per riga)", height=200, placeholder="https://esempio.com/p1\nhttps://esempio.com/p2")
     with col2:
-        st.markdown("**Campi da estrarre:**")
-        fields = st.pills("", list(estrai_info("https://www.example.com").keys()), selection_mode="multi", default=[])
-
+        fields = st.pills("Campi da estrarre", list(estrai_info("https://www.example.com").keys()), selection_mode="multi", default=[])
     if st.button("🚀 Avvia Estrazione"):
         if not fields:
-            st.error("❗ Seleziona almeno un campo da estrarre.")
+            st.error("Seleziona almeno un campo.")
             return
         url_list = [u.strip() for u in urls.splitlines() if u.strip()]
         if not url_list:
-            st.error("❗ Inserisci almeno un URL valido.")
+            st.error("Inserisci almeno un URL valido.")
             return
         prog = st.progress(0)
         results = []
         with st.spinner("Analisi in corso…"):
-            for i, u in enumerate(url_list, 1):
+            for i,u in enumerate(url_list,1):
                 info = estrai_info(u)
                 row = {"URL": u}
                 for f in fields:
                     row[f] = info[f]
                 results.append(row)
                 prog.progress(int(i/len(url_list)*100))
-        st.success(f"✅ Ho analizzato {len(url_list)} URL.")
+        st.success(f"Analizzati {len(url_list)} URL.")
         st.balloons()
         df = pd.DataFrame(results)
         st.dataframe(df, use_container_width=True)
@@ -91,26 +107,12 @@ def seo_extractor():
         buf.seek(0)
         st.download_button("📥 Download XLSX", data=buf, file_name="estrazione_seo.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-def placeholder_tool():
+def run_placeholder():
     st.title("🛠️ Altro Tool")
-    st.info("Contenuto del tool placeholder.")
+    st.info("Contenuto placeholder.")
 
-# Build navigation structure
-pages = {
-    "On-Page SEO": [
-        st.Page(seo_extractor, title="SEO Extractor"),
-        st.Page(placeholder_tool, title="Altro Tool")
-    ],
-    "Technical SEO": [
-        st.Page(placeholder_tool, title="Tool A"),
-        st.Page(placeholder_tool, title="Tool B")
-    ],
-    "Off-Page SEO": [
-        st.Page(placeholder_tool, title="Tool C"),
-        st.Page(placeholder_tool, title="Tool D")
-    ],
-}
-
-# Run navigation
-selected = st.navigation(pages, position="sidebar", expanded=True)
-selected.run()
+# Router
+if selected == "seo":
+    run_seo_extractor()
+else:
+    run_placeholder()
