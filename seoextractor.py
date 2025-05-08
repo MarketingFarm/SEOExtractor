@@ -1,4 +1,5 @@
 import streamlit as st
+st.write(f"STREAMLIT VERSION IN USE: {st.__version__}") # RIGA DI DEBUG
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
