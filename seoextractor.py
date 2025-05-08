@@ -9,27 +9,27 @@ st.set_page_config(
     page_title="SEO Extractor",
     page_icon="🔍",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# Nascondi automaticamente la sidebar nativa di Streamlit
+# CSS: nasconde label vuoti e colora la progress bar
 st.markdown("""
     <style>
-      [data-testid="collapsedControl"] { display: none !important; }
-      .css-18e3th9 { margin-top: 1rem; }  /* un po' di spazio sopra i contenuti */
+      label[data-testid="stWidgetLabel"] { display: none !important; }
+      .stProgress > div > div > div {
+        background-color: #f63366 !important;
+      }
     </style>
 """, unsafe_allow_html=True)
 
-# --- Header personalizzato ---
-header_col1, header_col2 = st.columns([1, 3])
-with header_col1:
-    st.image("https://i.ibb.co/0yMG6kDs/logo.png", width=50)
-with header_col2:
-    app_mode = st.selectbox(
-        "", 
-        ["🔍 SEO Extractor", "🛠️ Altro Tool"],
-        label_visibility="collapsed"
-    )
+# Sidebar con logo e menu
+st.sidebar.markdown(
+    '<div style="text-align:center; margin-bottom:20px;">'
+    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
+    '</div>',
+    unsafe_allow_html=True
+)
+app_mode = st.sidebar.selectbox("", ["🔍 SEO Extractor", "🛠️ Altro Tool"])
 
 BASE_HEADERS = {
     "User-Agent": (
@@ -71,7 +71,9 @@ def estrai_info(url: str):
         "H1": h1.get_text(strip=True) if h1 else "",
         "H2": " | ".join(h2_texts) if h2_texts else "",
         "Meta title": title.get_text(strip=True) if title else "",
+        "Meta title length": len(title.get_text(strip=True)) if title else 0,
         "Meta description": meta_desc["content"].strip() if meta_desc and meta_desc.has_attr("content") else "",
+        "Meta description length": len(meta_desc["content"].strip()) if meta_desc and meta_desc.has_attr("content") else 0,
         "Canonical": canonical["href"].strip() if canonical and canonical.has_attr("href") else "",
         "Meta robots": meta_robots["content"].strip() if meta_robots and meta_robots.has_attr("content") else ""
     }
@@ -79,7 +81,7 @@ def estrai_info(url: str):
 if app_mode == "🔍 SEO Extractor":
     st.title("🔍 SEO Extractor")
     st.markdown(
-        "Estrai **H1**, **H2**, **Meta title**, **Meta description**, **Canonical** e **Meta robots** in modo rapido e intuitivo."
+        "> Estrai **H1**, **H2**, **Meta title** (e lunghezza), **Meta description** (e lunghezza), **Canonical** e **Meta robots**"
     )
     st.divider()
 
@@ -119,8 +121,8 @@ if app_mode == "🔍 SEO Extractor":
                         for f in fields:
                             row[f] = info.get(f, "")
                         results.append(row)
-                        percent = int(i / len(urls) * 100)
-                        progress.progress(percent)
+                        pct = int(i / len(urls) * 100)
+                        progress.progress(pct)
                 st.success(f"✅ Ho analizzato {len(urls)} URL.")
                 st.balloons()
 
