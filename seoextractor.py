@@ -1,13 +1,10 @@
 import streamlit as st
-# RIGA DI DEBUG - RIMUOVERE UNA VOLTA RISOLTO IL PROBLEMA DI VERSIONE
-st.write(f"STREAMLIT VERSION IN USE: {st.__version__}")
-
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from io import BytesIO
 
-# --- Configurazione della Pagina ---
+# --- Configurazione della Pagina (DEVE ESSERE IL PRIMO COMANDO STREAMLIT) ---
 st.set_page_config(
     page_title="Multi-Tool Dashboard SEO",
     page_icon="🔧",
@@ -15,13 +12,28 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# RIGA DI DEBUG - PUOI RIMUOVERLA QUANDO TUTTO FUNZIONA COME DESIDERATO
+st.write(f"STREAMLIT VERSION IN USE: {st.__version__}")
+
 # --- Stili CSS Personalizzati ---
 st.markdown("""
 <style>
+    /* Colora la progress bar */
     .stProgress > div > div > div { background-color: #f63366 !important; }
-    .sidebar-logo { text-align: center; margin-bottom: 20px; margin-top: 10px; }
-    .sidebar-logo img { width: 60px; }
-    [data-testid="stSidebarNav"] { padding-top: 0rem; }
+
+    /* Stile per il logo nella sidebar */
+    .sidebar-logo {
+        text-align: center;
+        margin-bottom: 20px;
+        margin-top: 10px;
+    }
+    .sidebar-logo img {
+        width: 60px;
+    }
+    /* Rimuove padding eccessivo dalla sidebar se necessario */
+    [data-testid="stSidebarNav"] {
+        padding-top: 0rem; /* Riduci padding in cima al menu di navigazione */
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -34,19 +46,20 @@ BASE_HEADERS = {
 }
 
 def estrai_info_seo(url):
+    """Estrae informazioni SEO da un URL."""
     data = {
         "URL": url, "H1": "N/D", "H2": "N/D", "Meta title": "N/D",
         "Meta title length": 0, "Meta description": "N/D",
         "Meta description length": 0, "Canonical": "N/D", "Meta robots": "N/D"
     }
     try:
-        current_url_to_process = url
+        current_url_to_process = url 
         url_to_request = url
         if not url.startswith("http://") and not url.startswith("https://"):
             url_to_request = "https://" + url
 
         resp = requests.get(url_to_request, headers=BASE_HEADERS, timeout=15, allow_redirects=True)
-        resp.raise_for_status()
+        resp.raise_for_status() 
         
         data["URL"] = resp.url if resp.url != url_to_request else current_url_to_process
         soup = BeautifulSoup(resp.content, "html.parser")
@@ -76,8 +89,8 @@ def estrai_info_seo(url):
         if robots_tag and robots_tag.has_attr("content"): data["Meta robots"] = robots_tag["content"].strip()
         return data
 
-    except requests.exceptions.RequestException as e: # Cattura più errori di richiesta
-        st.warning(f"Errore ({type(e).__name__}) nel recuperare {current_url_to_process}: {str(e)[:100]}") # Limita lunghezza errore
+    except requests.exceptions.RequestException as e:
+        st.warning(f"Errore ({type(e).__name__}) nel recuperare {current_url_to_process}: {str(e)[:100]}")
         for key in data:
             if key != "URL": data[key] = f"Errore Richiesta ({type(e).__name__})"
         data["URL"] = current_url_to_process
@@ -90,15 +103,18 @@ def estrai_info_seo(url):
         return data
 
 def pagina_seo_extractor():
+    """Pagina per il tool SEO Extractor."""
     st.title("🔍 SEO Extractor")
-    st.markdown("Estrai H1, H2, Meta title/length, Meta description/length, Canonical e Meta robots.")
+    st.markdown("Estrai H1, H2, Meta title/length, Meta description/length, Canonical e Meta robots da una lista di URL.")
     st.divider()
 
     col1_input, col2_options = st.columns([0.65, 0.35], gap="large")
+
     with col1_input:
         urls_input_str = st.text_area(
-            "Incolla gli URL (uno per riga)", height=280,
-            placeholder="esempio.com/pagina1\nwww.altroesempio.it/articolo",
+            "Incolla gli URL (uno per riga)",
+            height=280,
+            placeholder="esempio.com/pagina1\nwww.altroesempio.it/articolo\nmiosito.org/contatti",
             label_visibility="collapsed"
         )
         st.caption("Puoi incollare URL con o senza `http://` o `https://`.")
@@ -112,19 +128,24 @@ def pagina_seo_extractor():
     with col2_options:
         st.subheader("Campi da Estrarre")
         campi_selezionati_utente = st.multiselect(
-            "Seleziona i campi:", options=["URL"] + campi_disponibili,
-            default=default_fields, label_visibility="collapsed"
+            "Seleziona i campi:",
+            options=["URL"] + campi_disponibili,
+            default=default_fields,
+            label_visibility="collapsed"
         )
-        st.caption("Seleziona i dati SEO da visualizzare. 'URL' è l'URL finale post-redirect.")
+        st.caption("Seleziona i dati SEO che desideri visualizzare nella tabella. 'URL' si riferisce all'URL finale dopo eventuali redirect.")
 
     if st.button("🚀 Avvia Estrazione", type="primary", use_container_width=True):
         urls_raw = [u.strip() for u in urls_input_str.splitlines() if u.strip()]
+        
         if not urls_raw:
-            st.error("Inserisci almeno un URL."); return
+            st.error("Inserisci almeno un URL.")
+            return
         if not campi_selezionati_utente:
-            st.error("Seleziona almeno un campo da estrarre."); return
+            st.error("Seleziona almeno un campo da estrarre.")
+            return
 
-        progress_bar = st.progress(0, text="Inizializzazione...")
+        progress_bar = st.progress(0, text="Inizializzazione analisi...")
         results_list = []
         total_urls = len(urls_raw)
         status_placeholder = st.empty()
@@ -132,13 +153,14 @@ def pagina_seo_extractor():
         for i, url_originale in enumerate(urls_raw):
             percent_complete = (i + 1) / total_urls
             status_placeholder.text(f"Analizzando: {url_originale} ({i+1}/{total_urls})")
-            progress_bar.progress(percent_complete, text=f"Analisi... {int(percent_complete*100)}%")
+            progress_bar.progress(percent_complete, text=f"Analisi in corso... {int(percent_complete*100)}%")
             
             info_seo = estrai_info_seo(url_originale)
             riga_risultati = {campo: info_seo.get(campo, "N/D") for campo in campi_selezionati_utente}
             results_list.append(riga_risultati)
 
-        status_placeholder.empty(); progress_bar.empty()
+        status_placeholder.empty()
+        progress_bar.empty()
 
         if results_list:
             st.success(f"Estrazione completata per {len(results_list)} URL.")
@@ -151,42 +173,49 @@ def pagina_seo_extractor():
             output = BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df_display.to_excel(writer, index=False, sheet_name='Estrazione SEO')
+            excel_data = output.getvalue()
             st.download_button(
-                label="📥 Download Report (XLSX)", data=output.getvalue(),
+                label="📥 Download Report (XLSX)",
+                data=excel_data,
                 file_name=f"estrazione_seo_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
         else:
-            st.warning("Nessun dato estratto. Controlla URL o messaggi di avviso.")
+            st.warning("Nessun dato è stato estratto. Controlla gli URL o i messaggi di avviso sopra.")
 
-def pagina_placeholder(tool_name="Tool Placeholder", icon="🛠️", section_info="N/D"): # section_info invece di group_name
+def pagina_placeholder(tool_name="Tool Placeholder", icon="🛠️", group_name="N/D"):
+    """Pagina placeholder generica per altri tool."""
     st.title(f"{icon} {tool_name}")
-    st.subheader(f"(Placeholder per la sezione: {section_info})") # Mostra info sezione
-    st.info(f"Contenuto per **{tool_name}** da implementare.")
-    st.image("https://via.placeholder.com/800x300.png?text=Contenuto+del+Tool", caption=f"Placeholder {tool_name}")
+    st.subheader(f"Sezione: {group_name}") 
+    st.info(f"Questa è una pagina placeholder per il tool: **{tool_name}**.")
+    st.write("Il contenuto specifico per questo tool verrà implementato qui.")
+    st.image("https://via.placeholder.com/800x300.png?text=Contenuto+del+Tool+in+Arrivo",
+             caption=f"Immagine placeholder per {tool_name}")
 
-# --- Sidebar e Navigazione (SENZA 'group' per compatibilità) ---
+# --- Sidebar e Navigazione (CON 'group' ripristinato) ---
 with st.sidebar:
     st.markdown(
-        '<div class="sidebar-logo"><img src="https://i.ibb.co/0yMG6kDs/logo.png" alt="Logo"/></div>',
+        '<div class="sidebar-logo">'
+        '<img src="https://i.ibb.co/0yMG6kDs/logo.png" alt="Logo"/>'
+        '</div>',
         unsafe_allow_html=True
     )
 
-    # Navigazione senza l'argomento 'group'
     pg = st.navigation(
         [
-            st.Page(pagina_seo_extractor, title="SEO Extractor (On-Page)", icon="🔍"), # Aggiunto "(On-Page)" al titolo
-            st.Page(lambda: pagina_placeholder("Struttura Dati", icon="📝", section_info="On-Page SEO"), title="Struttura Dati (On-Page)", icon="📝"),
-            st.Page(lambda: pagina_placeholder("Analisi Contenuto", icon="📰", section_info="On-Page SEO"), title="Analisi Contenuto (On-Page)", icon="📰"),
+            st.Page(pagina_seo_extractor, title="SEO Extractor", icon="🔍", group="On-Page SEO"),
+            st.Page(lambda: pagina_placeholder("Struttura Dati", icon="📝", group_name="On-Page SEO"), title="Struttura Dati", icon="📝", group="On-Page SEO"),
+            st.Page(lambda: pagina_placeholder("Analisi Contenuto", icon="📰", group_name="On-Page SEO"), title="Analisi Contenuto", icon="📰", group="On-Page SEO"),
 
-            st.Page(lambda: pagina_placeholder("Verifica Robots.txt", icon="🤖", section_info="Technical SEO"), title="Verifica Robots.txt (Tech)", icon="🤖"),
-            st.Page(lambda: pagina_placeholder("Analisi Sitemap", icon="🗺️", section_info="Technical SEO"), title="Analisi Sitemap (Tech)", icon="🗺️"),
-            st.Page(lambda: pagina_placeholder("Controllo Redirect", icon="↪️", section_info="Technical SEO"), title="Controllo Redirect (Tech)", icon="↪️"),
+            st.Page(lambda: pagina_placeholder("Verifica Robots.txt", icon="🤖", group_name="Technical SEO"), title="Verifica Robots.txt", icon="🤖", group="Technical SEO"),
+            st.Page(lambda: pagina_placeholder("Analisi Sitemap", icon="🗺️", group_name="Technical SEO"), title="Analisi Sitemap", icon="🗺️", group="Technical SEO"),
+            st.Page(lambda: pagina_placeholder("Controllo Redirect", icon="↪️", group_name="Technical SEO"), title="Controllo Redirect", icon="↪️", group="Technical SEO"),
 
-            st.Page(lambda: pagina_placeholder("Analisi Backlink", icon="🔄", section_info="Off-Page SEO"), title="Analisi Backlink (Off-Page)", icon="🔄"),
-            st.Page(lambda: pagina_placeholder("Ricerca Menzioni", icon="🗣️", section_info="Off-Page SEO"), title="Ricerca Menzioni (Off-Page)", icon="🗣️"),
+            st.Page(lambda: pagina_placeholder("Analisi Backlink", icon="🔄", group_name="Off-Page SEO"), title="Analisi Backlink", icon="🔄", group="Off-Page SEO"),
+            st.Page(lambda: pagina_placeholder("Ricerca Menzioni", icon="🗣️", group_name="Off-Page SEO"), title="Ricerca Menzioni", icon="🗣️", group="Off-Page SEO"),
         ]
     )
 
+# --- Esegui la Pagina Selezionata ---
 pg.run()
