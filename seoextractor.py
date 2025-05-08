@@ -23,17 +23,14 @@ st.markdown("""
     .sidebar-logo {
         text-align: center;
         margin-bottom: 20px;
-        margin-top: 10px; /* Aggiunto spazio sopra il logo */
+        margin-top: 10px;
     }
     .sidebar-logo img {
-        width: 60px; /* Leggermente aggiustata la dimensione */
+        width: 60px;
     }
     /* Rimuove padding eccessivo dalla sidebar se necessario */
     [data-testid="stSidebarNav"] {
         padding-top: 0rem; /* Riduci padding in cima al menu di navigazione */
-    }
-    [data-testid="stSidebarUserContent"] {
-        padding-top: 1rem; /* Riduci padding sopra il logo se è dentro user content */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -41,7 +38,7 @@ st.markdown("""
 # --- Funzioni dei Tool ---
 BASE_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7", # Aggiunto per preferire contenuti in italiano
+    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
     "Connection": "keep-alive"
 }
@@ -54,13 +51,22 @@ def estrai_info_seo(url):
         "Meta description length": 0, "Canonical": "N/D", "Meta robots": "N/D"
     }
     try:
-        # Aggiungi http:// se manca per richieste semplici, ma idealmente l'URL dovrebbe essere completo
+        current_url_to_process = url # Manteniamo l'URL originale per il dizionario
         if not url.startswith("http://") and not url.startswith("https://"):
-            url = "http://" + url # Tentativo basico, potrebbe non essere sempre corretto per https
-            data["URL"] = url # Aggiorna l'URL se modificato
+            # Tentativo di default con https per URL senza schema
+            url_to_request = "https://" + url
+        else:
+            url_to_request = url
 
-        resp = requests.get(url, headers=BASE_HEADERS, timeout=15, allow_redirects=True)
-        resp.raise_for_status()
+        resp = requests.get(url_to_request, headers=BASE_HEADERS, timeout=15, allow_redirects=True)
+        resp.raise_for_status() # Solleva un'eccezione per codici di stato HTTP errati
+        
+        # Aggiorna l'URL nel dizionario se c'è stato un redirect
+        if resp.url != url_to_request:
+            data["URL"] = resp.url # URL effettivo dopo i redirect
+        else:
+            data["URL"] = current_url_to_process # URL originale fornito se non ci sono redirect evidenti
+
         soup = BeautifulSoup(resp.content, "html.parser")
 
         h1_tag = soup.find("h1")
@@ -71,7 +77,9 @@ def estrai_info_seo(url):
         robots_tag = soup.find("meta", attrs={"name": "robots"})
 
         if h1_tag: data["H1"] = h1_tag.get_text(strip=True)
-        if h2_tags: data["H2"] = " | ".join([h.get_text(strip=True) for h in h2_tags if h.get_text(strip=True)])
+        if h2_tags:
+            h2_texts = [h.get_text(strip=True) for h in h2_tags if h.get_text(strip=True)]
+            if h2_texts: data["H2"] = " | ".join(h2_texts)
         if title_tag:
             data["Meta title"] = title_tag.get_text(strip=True)
             data["Meta title length"] = len(data["Meta title"])
@@ -84,19 +92,23 @@ def estrai_info_seo(url):
         return data
 
     except requests.exceptions.MissingSchema:
-        st.warning(f"URL non valido (schema mancante http/https): {url}")
+        # Questo errore dovrebbe essere gestito dalla logica di aggiunta schema, ma lo teniamo per sicurezza
+        st.warning(f"URL non valido (schema http/https mancante): {current_url_to_process}")
         for key in data:
             if key != "URL": data[key] = "Errore Schema URL"
+        data["URL"] = current_url_to_process
         return data
     except requests.exceptions.RequestException as e:
-        st.warning(f"Errore nel recuperare {url}: {e}")
+        st.warning(f"Errore nel recuperare {current_url_to_process}: {e}")
         for key in data:
             if key != "URL": data[key] = "Errore Richiesta"
+        data["URL"] = current_url_to_process
         return data
     except Exception as e:
-        st.warning(f"Errore generico nell'analisi di {url}: {e}")
+        st.warning(f"Errore generico nell'analisi di {current_url_to_process}: {e}")
         for key in data:
             if key != "URL": data[key] = "Errore Analisi"
+        data["URL"] = current_url_to_process
         return data
 
 
@@ -109,64 +121,62 @@ def pagina_seo_extractor():
     col1_input, col2_options = st.columns([0.65, 0.35], gap="large")
 
     with col1_input:
-        urls_input = st.text_area(
+        urls_input_str = st.text_area(
             "Incolla gli URL (uno per riga)",
-            height=280, # Aumentata altezza
-            placeholder="https://esempio.com/pagina1\nhttps://www.altroesempio.it/articolo\nhttp://miosito.org/contatti",
+            height=280,
+            placeholder="esempio.com/pagina1\nwww.altroesempio.it/articolo\nmiosito.org/contatti",
             label_visibility="collapsed"
         )
+        st.caption("Puoi incollare URL con o senza `http://` o `https://`.")
+
 
     campi_disponibili = [
         "H1", "H2", "Meta title", "Meta title length",
         "Meta description", "Meta description length", "Canonical", "Meta robots"
     ]
     default_fields = [
-        "H1", "Meta title", "Meta description", "Canonical"
+        "URL", "H1", "Meta title", "Meta description", "Canonical" # Aggiunto URL ai default
     ]
 
     with col2_options:
         st.subheader("Campi da Estrarre")
-        campi_selezionati = st.multiselect(
+        # Assicurati che 'URL' sia sempre una opzione e selezionato di default, ma non mostrato come opzione deselezionabile
+        # per l'utente se lo vogliamo sempre presente. Per ora lo lascio come opzione standard.
+        campi_selezionati_utente = st.multiselect(
             "Seleziona i campi:",
-            options=campi_disponibili,
+            options=["URL"] + campi_disponibili, # 'URL' è il primo, gli altri seguono
             default=default_fields,
             label_visibility="collapsed"
         )
-        st.caption("Seleziona i dati SEO che desideri visualizzare nella tabella.")
+        st.caption("Seleziona i dati SEO che desideri visualizzare nella tabella. 'URL' si riferisce all'URL finale dopo eventuali redirect.")
+
 
     if st.button("🚀 Avvia Estrazione", type="primary", use_container_width=True):
-        urls_raw = [u.strip() for u in urls_input.splitlines() if u.strip()]
+        urls_raw = [u.strip() for u in urls_input_str.splitlines() if u.strip()]
         
-        urls_validi = []
-        for u_raw in urls_raw:
-            if not (u_raw.startswith("http://") or u_raw.startswith("https://")):
-                # Tenta di aggiungere https:// di default se lo schema manca,
-                # ma avvisa l'utente o gestisci in modo più sofisticato se necessario
-                urls_validi.append("https://" + u_raw)
-            else:
-                urls_validi.append(u_raw)
-
-        if not urls_validi:
-            st.error("Inserisci almeno un URL valido.")
+        if not urls_raw:
+            st.error("Inserisci almeno un URL.")
             return
-        if not campi_selezionati:
+        if not campi_selezionati_utente: # Anche se URL è di default, l'utente potrebbe deselezionare tutto
             st.error("Seleziona almeno un campo da estrarre.")
             return
 
         progress_bar = st.progress(0, text="Inizializzazione analisi...")
         results_list = []
-        total_urls = len(urls_validi)
+        total_urls = len(urls_raw)
         status_placeholder = st.empty()
 
-        for i, url in enumerate(urls_validi):
+        for i, url_originale in enumerate(urls_raw):
             percent_complete = (i + 1) / total_urls
-            status_placeholder.text(f"Analizzando: {url} ({i+1}/{total_urls})")
+            status_placeholder.text(f"Analizzando: {url_originale} ({i+1}/{total_urls})")
             progress_bar.progress(percent_complete, text=f"Analisi in corso... {int(percent_complete*100)}%")
             
-            info = estrai_info_seo(url)
-            riga_risultati = {"URL Originale": url} # Manteniamo l'URL processato
-            for campo in campi_selezionati:
-                riga_risultati[campo] = info.get(campo, "N/D")
+            info_seo = estrai_info_seo(url_originale) # La funzione estrai_info_seo ora gestisce l'URL
+            
+            # Costruisci la riga dei risultati basandoti sui campi selezionati dall'utente
+            riga_risultati = {}
+            for campo in campi_selezionati_utente:
+                riga_risultati[campo] = info_seo.get(campo, "N/D") # Usa .get per sicurezza se un campo non fosse in info_seo
             results_list.append(riga_risultati)
 
         status_placeholder.empty()
@@ -174,19 +184,24 @@ def pagina_seo_extractor():
 
         if results_list:
             st.success(f"Estrazione completata per {len(results_list)} URL.")
+            # Non mostrare palloncini se ci sono stati warning durante l'estrazione
+            # Questo richiede di tracciare i warning, per ora li lascio
             st.balloons()
 
             df = pd.DataFrame(results_list)
-            colonne_ordinate = ["URL Originale"] + [c for c in campi_selezionati if c in df.columns]
+            
+            # Assicura che le colonne siano nell'ordine selezionato dall'utente
+            # e che 'URL' (o il campo URL effettivo) sia il primo se selezionato.
+            colonne_ordinate = [c for c in campi_selezionati_utente if c in df.columns]
             df_display = df[colonne_ordinate]
+
 
             st.dataframe(df_display, use_container_width=True, hide_index=True)
 
             output = BytesIO()
-            # Usare 'with' assicura che lo writer sia chiuso correttamente
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df_display.to_excel(writer, index=False, sheet_name='Estrazione SEO')
-            excel_data = output.getvalue() # .getvalue() è corretto per BytesIO
+            excel_data = output.getvalue()
 
             st.download_button(
                 label="📥 Download Report (XLSX)",
@@ -201,21 +216,25 @@ def pagina_seo_extractor():
 def pagina_placeholder(tool_name="Tool Placeholder", icon="🛠️", group_name="N/D"):
     """Pagina placeholder generica per altri tool."""
     st.title(f"{icon} {tool_name}")
-    st.subheader(f"Sezione: {group_name}")
+    st.subheader(f"Sezione: {group_name}") # Mostra il nome del gruppo per contesto
     st.info(f"Questa è una pagina placeholder per il tool: **{tool_name}**.")
     st.write("Il contenuto specifico per questo tool verrà implementato qui.")
     st.image("https://via.placeholder.com/800x300.png?text=Contenuto+del+Tool+in+Arrivo",
              caption=f"Immagine placeholder per {tool_name}")
 
 # --- Sidebar e Navigazione ---
+# NOTA IMPORTANTE: La seguente sezione st.navigation con l'argomento 'group'
+# richiede Streamlit versione 1.33.0 o successiva.
+# Se riscontri l'errore "TypeError: Page() got an unexpected keyword argument 'group'",
+# assicurati che il tuo file 'requirements.txt' specifichi una versione adeguata
+# (es. streamlit==1.36.0) e che Streamlit Cloud stia usando quella versione.
 with st.sidebar:
     st.markdown(
         '<div class="sidebar-logo">'
-        '<img src="https://i.ibb.co/0yMG6kDs/logo.png" alt="Logo"/>' # Assicurati che questo URL sia valido e accessibile
+        '<img src="https://i.ibb.co/0yMG6kDs/logo.png" alt="Logo"/>'
         '</div>',
         unsafe_allow_html=True
     )
-    # st.markdown("### Navigazione Principale") # L'header del gruppo fa già da titolo
 
     pg = st.navigation(
         [
