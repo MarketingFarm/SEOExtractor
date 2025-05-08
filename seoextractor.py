@@ -1,62 +1,53 @@
-# ... (codice precedente della sidebar, incluso il logo) ...
+# File: seoextractor.py (o il nome del tuo file principale)
+import streamlit as st
 
-with st.sidebar:
-    st.markdown(
-        '<div class="sidebar-logo">'
-        '<img src="https://i.ibb.co/0yMG6kDs/logo.png" alt="Logo"/>'
-        '</div>',
-        unsafe_allow_html=True
-    )
+# 1. Configurazione della pagina (primo comando Streamlit)
+try:
+    st.set_page_config(page_title="Test Minimale App", layout="wide")
+except Exception as e:
+    st.error(f"Errore durante st.set_page_config: {e}")
+    st.stop() # Interrompe l'esecuzione se set_page_config fallisce
 
-    # --- INIZIO BLOCCO DI TEST DIAGNOSTICO ---
-    def dummy_page_1():
-        st.title("Dummy Page 1")
-        st.write("Contenuto della pagina dummy 1.")
+# 2. Scrivi la versione di Streamlit per conferma
+st.write(f"Streamlit Version in uso: {st.__version__}")
 
-    def dummy_page_2():
-        st.title("Dummy Page 2 (Gruppo Test)")
-        st.write("Contenuto della pagina dummy 2.")
+# 3. Definisci alcune semplici funzioni per le pagine
+def pagina_principale():
+    st.title("Pagina Principale")
+    st.write("Benvenuto nella pagina principale di test!")
+    st.success("La pagina principale è stata caricata.")
 
-    try:
-        st.write("Tentativo di creare st.navigation con dummy pages...") # Log di debug
-        
-        # Test 1: Pagina singola senza gruppo
-        # pg_test = st.navigation([st.Page(dummy_page_1, title="Dummy 1", icon="👍")])
-        # st.write("Test 1 (pagina singola) st.navigation creato.")
+def pagina_impostazioni():
+    st.title("Pagina Impostazioni")
+    st.write("Questa è la pagina delle impostazioni, parte del gruppo 'Config'.")
+    st.info("La pagina impostazioni è stata caricata.")
 
-        # Test 2: Pagina singola CON gruppo (il punto critico)
-        pg_test = st.navigation([
-             st.Page(dummy_page_2, title="Dummy 2 - Gruppo Test", icon="🐛", group="Mio Gruppo Test")
-        ])
-        st.write("Test 2 (pagina singola CON GRUPPO) st.navigation creato.")
-        
-        # Test 3: Prova con la tua pagina problematica MA SENZA ALTRE PAGINE
-        # pg_test = st.navigation([
-        #     st.Page(pagina_seo_extractor, title="SEO Extractor Test", icon="🔍", group="On-Page SEO Test")
-        # ])
-        # st.write("Test 3 (pagina_seo_extractor CON GRUPPO) st.navigation creato.")
+# 4. Test della sidebar e della navigazione
+try:
+    with st.sidebar:
+        st.header("Sidebar Test")
+        st.write("Contenuto della Sidebar.")
 
+    # Test di st.navigation con st.Page e l'argomento 'group'
+    pg = st.navigation([
+        st.Page(pagina_principale, title="Home", icon="🏠"),
+        st.Page(pagina_impostazioni, title="Impostazioni App", icon="⚙️", group="Configurazione")
+    ])
 
-        # MANTIENI QUESTO PER ORA PER FAR PARTIRE QUALCOSA
-        # Se i test sopra falliscono, l'app potrebbe non caricare pg_test.run()
-        # Per ora, commentiamo l'originale pg.run() e vediamo se i log di st.write appaiono
-        
-        # pg = st.navigation( # Commenta temporaneamente la tua navigazione originale
-        # [
-        # st.Page(pagina_seo_extractor, title="SEO Extractor", icon="🔍", group="On-Page SEO"),
-        # st.Page(lambda: pagina_placeholder("Struttura Dati", icon="📝", group_name="On-Page SEO"), title="Struttura Dati", icon="📝", group="On-Page SEO"),
-        # # ... altre pagine
-        # ]
-        # )
-        st.write("Blocco try completato. Ora eseguire pg_test.run()")
-        pg_test.run() # Esegui la navigazione di test
-        st.write("pg_test.run() eseguito.")
+    st.sidebar.info("Menu st.navigation creato con successo.") # Messaggio nella sidebar
 
-    except Exception as e:
-        st.error(f"Errore durante la creazione del menu di test st.navigation: {e}")
-        st.exception(e) # Stampa il traceback completo dell'eccezione qui nell'app
-    # --- FINE BLOCCO DI TEST DIAGNOSTICO ---
+except Exception as e:
+    st.error(f"Errore durante la creazione di st.sidebar o st.navigation: {e}")
+    st.exception(e) # Mostra il traceback completo nell'app
+    st.stop()
 
-
-# --- Esegui la Pagina Selezionata ---
-# pg.run() # Commenta questo temporaneamente mentre usi pg_test.run() sopra
+# 5. Esegui la navigazione
+try:
+    pg.run()
+    # Non mettere st.write dopo pg.run() nella pagina principale,
+    # perché pg.run() sostituisce il contenuto della pagina.
+    # Eventuali messaggi post-run dovrebbero essere nella sidebar o gestiti diversamente.
+except Exception as e:
+    st.error(f"Errore durante pg.run(): {e}")
+    st.exception(e)
+    st.stop()
