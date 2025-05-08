@@ -9,27 +9,27 @@ st.set_page_config(
     page_title="SEO Extractor",
     page_icon="🔍",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# CSS: nasconde label vuoti e colora la progress bar in rosso
+# Nascondi automaticamente la sidebar nativa di Streamlit
 st.markdown("""
     <style>
-      label[data-testid="stWidgetLabel"] { display: none !important; }
-      .stProgress > div > div > div {
-        background-color: #f63366 !important;
-      }
+      [data-testid="collapsedControl"] { display: none !important; }
+      .css-18e3th9 { margin-top: 1rem; }  /* un po' di spazio sopra i contenuti */
     </style>
 """, unsafe_allow_html=True)
 
-# Sidebar con logo e menu
-st.sidebar.markdown(
-    '<div style="text-align:center; margin-bottom:20px;">'
-    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
-    '</div>',
-    unsafe_allow_html=True
-)
-app_mode = st.sidebar.selectbox("", ["🔍 SEO Extractor", "🛠️ Altro Tool"])
+# --- Header personalizzato ---
+header_col1, header_col2 = st.columns([1, 3])
+with header_col1:
+    st.image("https://i.ibb.co/0yMG6kDs/logo.png", width=50)
+with header_col2:
+    app_mode = st.selectbox(
+        "", 
+        ["🔍 SEO Extractor", "🛠️ Altro Tool"],
+        label_visibility="collapsed"
+    )
 
 BASE_HEADERS = {
     "User-Agent": (
@@ -117,10 +117,7 @@ if app_mode == "🔍 SEO Extractor":
                         info = estrai_info(url)
                         row = {"URL": url}
                         for f in fields:
-                            text = info.get(f, "")
-                            row[f] = text
-                            if f in ["Meta title", "Meta description"]:
-                                row[f + " length"] = len(text)
+                            row[f] = info.get(f, "")
                         results.append(row)
                         percent = int(i / len(urls) * 100)
                         progress.progress(percent)
