@@ -12,27 +12,24 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Global CSS ---
+# Global CSS: nasconde label vuoti e colora progress bar
 st.markdown("""
     <style>
-      /* Nasconde label vuoti */
       label[data-testid="stWidgetLabel"] { display: none !important; }
-      /* Rende rossa la progress bar */
       .stProgress > div > div > div {
         background-color: #f63366 !important;
       }
     </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar header with logo above navigation ---
+# Sidebar logo
 st.sidebar.markdown(
-    '<div style="text-align:center; margin-bottom:10px;">'
-    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
+    '<div style="text-align:center; margin-bottom:20px;">'
+    '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40"/>'
     '</div>',
     unsafe_allow_html=True
 )
 
-# --- Shared extraction logic ---
 BASE_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) "
@@ -46,7 +43,7 @@ def estrai_info(url: str):
     segments = parsed.path.lstrip("/").split("/")
     lang_code = segments[0] if segments and "-" in segments[0] else ""
     headers = BASE_HEADERS.copy()
-    if "-" in lang_code and len(lang_code) == 5:
+    if "-" in lang_code and len(lang_code)==5:
         lang, region = lang_code.split("-")
         headers["Accept-Language"] = f"{lang}-{region.upper()},{lang};q=0.9"
     else:
@@ -65,9 +62,9 @@ def estrai_info(url: str):
     h1 = soup.find("h1")
     h2_texts = [h.get_text(strip=True) for h in soup.find_all("h2")]
     title = soup.title
-    meta_desc = soup.find("meta", attrs={"name": "description"})
+    meta_desc = soup.find("meta", attrs={"name":"description"})
     canonical = soup.find("link", rel="canonical")
-    meta_robots = soup.find("meta", attrs={"name": "robots"})
+    meta_robots = soup.find("meta", attrs={"name":"robots"})
 
     return {
         "H1": h1.get_text(strip=True) if h1 else "",
@@ -80,7 +77,6 @@ def estrai_info(url: str):
         "Meta robots": meta_robots["content"].strip() if meta_robots and meta_robots.has_attr("content") else ""
     }
 
-# --- Page definitions ---
 def seo_extractor():
     st.title("🔍 SEO Extractor")
     st.markdown(
@@ -101,12 +97,12 @@ def seo_extractor():
         st.markdown("**Campi da estrarre:**")
         fields = st.pills(
             "",
-            ["H1", "H2", "Meta title", "Meta description", "Canonical", "Meta robots"],
+            ["H1","H2","Meta title","Meta description","Canonical","Meta robots"],
             selection_mode="multi",
             default=[]
         )
 
-    st.markdown("")
+    st.markdown("")  # spacer
     if st.button("🚀 Avvia Estrazione"):
         if not fields:
             st.error("❗ Seleziona almeno un campo da estrarre.")
@@ -116,16 +112,15 @@ def seo_extractor():
             st.error("❗ Inserisci almeno un URL valido.")
             return
 
-        results = []
-        progress = st.progress(0)
+        results, progress = [], st.progress(0)
         with st.spinner("Analisi in corso…"):
             for i, url in enumerate(urls, start=1):
                 info = estrai_info(url)
-                row = {"URL": url}
+                row = {"URL":url}
                 for f in fields:
-                    row[f] = info.get(f, "")
+                    row[f] = info.get(f,"")
                 results.append(row)
-                progress.progress(int(i / len(urls) * 100))
+                progress.progress(int(i/len(urls)*100))
 
         st.success(f"✅ Ho analizzato {len(urls)} URL.")
         st.balloons()
@@ -144,25 +139,16 @@ def seo_extractor():
             use_container_width=False
         )
 
-def altro_tool():
-    st.title("🛠️ Altro Tool")
-    st.info("Placeholder per il secondo strumento.")
+def placeholder_tool():
+    st.title("🛠️ Placeholder Tool")
+    st.info("Qui comparirà il contenuto del tuo secondo strumento.")
 
-# --- Navigation with grouped sections ---
-pages = {
-    "On-Page SEO": [
-        st.Page(seo_extractor, title="🔍 SEO Extractor"),
-        st.Page(altro_tool,    title="🛠️ Altro Tool")
-    ],
-    "Technical SEO": [
-        st.Page(altro_tool, title="🛠️ Altro Tool"),
-        st.Page(altro_tool, title="🛠️ Altro Tool")
-    ],
-    "Off-Page SEO": [
-        st.Page(altro_tool, title="🛠️ Altro Tool"),
-        st.Page(altro_tool, title="🛠️ Altro Tool")
-    ]
+# --- Navigation grouping ---
+sections = {
+    "On-Page SEO": [seo_extractor, placeholder_tool],
+    "Technical SEO": [placeholder_tool, placeholder_tool],
+    "Off-Page SEO": [placeholder_tool, placeholder_tool]
 }
 
-selected = st.navigation(pages, position="sidebar", expanded=True)
-selected.run()
+current = st.navigation(sections, position="sidebar", expanded=True)
+current.run()
