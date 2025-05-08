@@ -12,20 +12,21 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Global CSS & Sidebar Logo ---
+# --- Global CSS ---
 st.markdown("""
     <style>
-      /* Nasconde i label vuoti */
+      /* Nasconde label vuoti */
       label[data-testid="stWidgetLabel"] { display: none !important; }
-      /* Colora la progress bar come i pulsanti "primary" */
+      /* Rende rossa la progress bar */
       .stProgress > div > div > div {
         background-color: #f63366 !important;
       }
     </style>
 """, unsafe_allow_html=True)
 
+# --- Sidebar header with logo above navigation ---
 st.sidebar.markdown(
-    '<div style="text-align:center; margin-bottom:20px;">'
+    '<div style="text-align:center; margin-bottom:10px;">'
     '<img src="https://i.ibb.co/0yMG6kDs/logo.png" width="40" />'
     '</div>',
     unsafe_allow_html=True
@@ -61,7 +62,6 @@ def estrai_info(url: str):
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    # Extract elements
     h1 = soup.find("h1")
     h2_texts = [h.get_text(strip=True) for h in soup.find_all("h2")]
     title = soup.title
@@ -80,7 +80,7 @@ def estrai_info(url: str):
         "Meta robots": meta_robots["content"].strip() if meta_robots and meta_robots.has_attr("content") else ""
     }
 
-# --- Page 1: SEO Extractor ---
+# --- Page definitions ---
 def seo_extractor():
     st.title("🔍 SEO Extractor")
     st.markdown(
@@ -106,7 +106,7 @@ def seo_extractor():
             default=[]
         )
 
-    st.markdown("")  # spacer
+    st.markdown("")
     if st.button("🚀 Avvia Estrazione"):
         if not fields:
             st.error("❗ Seleziona almeno un campo da estrarre.")
@@ -126,6 +126,7 @@ def seo_extractor():
                     row[f] = info.get(f, "")
                 results.append(row)
                 progress.progress(int(i / len(urls) * 100))
+
         st.success(f"✅ Ho analizzato {len(urls)} URL.")
         st.balloons()
 
@@ -143,16 +144,25 @@ def seo_extractor():
             use_container_width=False
         )
 
-# --- Page 2: Placeholder Altro Tool ---
 def altro_tool():
     st.title("🛠️ Altro Tool")
-    st.info("Qui comparirà il contenuto del tuo secondo strumento.")
+    st.info("Placeholder per il secondo strumento.")
 
-# --- Navigation Setup ---
-pages = [
-    st.Page(seo_extractor, title="🔍 SEO Extractor", icon="🔍"),
-    st.Page(altro_tool,    title="🛠️ Altro Tool",       icon="🛠️")
-]
+# --- Navigation with grouped sections ---
+pages = {
+    "On-Page SEO": [
+        st.Page(seo_extractor, title="🔍 SEO Extractor"),
+        st.Page(altro_tool,    title="🛠️ Altro Tool")
+    ],
+    "Technical SEO": [
+        st.Page(altro_tool, title="🛠️ Altro Tool"),
+        st.Page(altro_tool, title="🛠️ Altro Tool")
+    ],
+    "Off-Page SEO": [
+        st.Page(altro_tool, title="🛠️ Altro Tool"),
+        st.Page(altro_tool, title="🛠️ Altro Tool")
+    ]
+}
 
-selected_page = st.navigation(pages, position="sidebar", expanded=True)
-selected_page.run()
+selected = st.navigation(pages, position="sidebar", expanded=True)
+selected.run()
