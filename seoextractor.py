@@ -3,11 +3,11 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from io import BytesIO
-from urllib.parse import urlparse # Non usata nel codice fornito, ma la lascio se serve altrove
+# from urllib.parse import urlparse # Non usata, ma la lascio se prevista per usi futuri
 
 # --- Configurazione della Pagina ---
 st.set_page_config(
-    page_title="Multi-Tool Dashboard",
+    page_title="Multi-Tool Dashboard SEO",
     page_icon="🔧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -16,9 +16,6 @@ st.set_page_config(
 # --- Stili CSS Personalizzati ---
 st.markdown("""
 <style>
-    /* Nascondi le label vuote dei widget se non necessarie */
-    /* label[data-testid="stWidgetLabel"] { display: none !important; } */
-
     /* Colora la progress bar */
     .stProgress > div > div > div { background-color: #f63366 !important; }
 
@@ -26,62 +23,81 @@ st.markdown("""
     .sidebar-logo {
         text-align: center;
         margin-bottom: 20px;
+        margin-top: 10px; /* Aggiunto spazio sopra il logo */
     }
     .sidebar-logo img {
-        width: 70px; /* Aumentato per migliore visibilità */
+        width: 60px; /* Leggermente aggiustata la dimensione */
+    }
+    /* Rimuove padding eccessivo dalla sidebar se necessario */
+    [data-testid="stSidebarNav"] {
+        padding-top: 0rem; /* Riduci padding in cima al menu di navigazione */
+    }
+    [data-testid="stSidebarUserContent"] {
+        padding-top: 1rem; /* Riduci padding sopra il logo se è dentro user content */
     }
 </style>
 """, unsafe_allow_html=True)
 
 # --- Funzioni dei Tool ---
-BASE_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"} # User agent più comune
+BASE_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7", # Aggiunto per preferire contenuti in italiano
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+    "Connection": "keep-alive"
+}
 
 def estrai_info_seo(url):
     """Estrae informazioni SEO da un URL."""
+    data = {
+        "URL": url, "H1": "N/D", "H2": "N/D", "Meta title": "N/D",
+        "Meta title length": 0, "Meta description": "N/D",
+        "Meta description length": 0, "Canonical": "N/D", "Meta robots": "N/D"
+    }
     try:
-        resp = requests.get(url, headers=BASE_HEADERS, timeout=15) # Timeout aumentato
-        resp.raise_for_status() # Solleva un'eccezione per codici di stato HTTP errati
-        soup = BeautifulSoup(resp.content, "html.parser") # Usare resp.content per gestire correttamente encoding
+        # Aggiungi http:// se manca per richieste semplici, ma idealmente l'URL dovrebbe essere completo
+        if not url.startswith("http://") and not url.startswith("https://"):
+            url = "http://" + url # Tentativo basico, potrebbe non essere sempre corretto per https
+            data["URL"] = url # Aggiorna l'URL se modificato
+
+        resp = requests.get(url, headers=BASE_HEADERS, timeout=15, allow_redirects=True)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.content, "html.parser")
 
         h1_tag = soup.find("h1")
         h2_tags = soup.find_all("h2")
         title_tag = soup.title
-        description_tag = soup.find("meta", attrs={"name": "description"}) # attrs per chiarezza
+        description_tag = soup.find("meta", attrs={"name": "description"})
         canonical_tag = soup.find("link", rel="canonical")
         robots_tag = soup.find("meta", attrs={"name": "robots"})
 
-        h1_text = h1_tag.get_text(strip=True) if h1_tag else "N/D" # N/D se non trovato
-        h2_texts = " | ".join([h.get_text(strip=True) for h in h2_tags]) if h2_tags else "N/D"
-        meta_title_text = title_tag.get_text(strip=True) if title_tag else "N/D"
-        meta_description_text = description_tag["content"].strip() if description_tag and description_tag.has_attr("content") else "N/D"
-        canonical_url = canonical_tag["href"].strip() if canonical_tag and canonical_tag.has_attr("href") else "N/D"
-        meta_robots_content = robots_tag["content"].strip() if robots_tag and robots_tag.has_attr("content") else "N/D"
+        if h1_tag: data["H1"] = h1_tag.get_text(strip=True)
+        if h2_tags: data["H2"] = " | ".join([h.get_text(strip=True) for h in h2_tags if h.get_text(strip=True)])
+        if title_tag:
+            data["Meta title"] = title_tag.get_text(strip=True)
+            data["Meta title length"] = len(data["Meta title"])
+        if description_tag and description_tag.has_attr("content"):
+            data["Meta description"] = description_tag["content"].strip()
+            data["Meta description length"] = len(data["Meta description"])
+        if canonical_tag and canonical_tag.has_attr("href"): data["Canonical"] = canonical_tag["href"].strip()
+        if robots_tag and robots_tag.has_attr("content"): data["Meta robots"] = robots_tag["content"].strip()
 
-        return {
-            "URL": url, # Aggiunto URL alla riga per riferimento
-            "H1": h1_text,
-            "H2": h2_texts,
-            "Meta title": meta_title_text,
-            "Meta title length": len(meta_title_text) if meta_title_text != "N/D" else 0,
-            "Meta description": meta_description_text,
-            "Meta description length": len(meta_description_text) if meta_description_text != "N/D" else 0,
-            "Canonical": canonical_url,
-            "Meta robots": meta_robots_content
-        }
+        return data
+
+    except requests.exceptions.MissingSchema:
+        st.warning(f"URL non valido (schema mancante http/https): {url}")
+        for key in data:
+            if key != "URL": data[key] = "Errore Schema URL"
+        return data
     except requests.exceptions.RequestException as e:
         st.warning(f"Errore nel recuperare {url}: {e}")
-        return {
-            "URL": url,
-            "H1": "Errore", "H2": "Errore", "Meta title": "Errore", "Meta title length": 0,
-            "Meta description": "Errore", "Meta description length": 0, "Canonical": "Errore", "Meta robots": "Errore"
-        }
+        for key in data:
+            if key != "URL": data[key] = "Errore Richiesta"
+        return data
     except Exception as e:
         st.warning(f"Errore generico nell'analisi di {url}: {e}")
-        return {
-            "URL": url,
-            "H1": "Errore Analisi", "H2": "Errore Analisi", "Meta title": "Errore Analisi", "Meta title length": 0,
-            "Meta description": "Errore Analisi", "Meta description length": 0, "Canonical": "Errore Analisi", "Meta robots": "Errore Analisi"
-        }
+        for key in data:
+            if key != "URL": data[key] = "Errore Analisi"
+        return data
 
 
 def pagina_seo_extractor():
@@ -90,18 +106,16 @@ def pagina_seo_extractor():
     st.markdown("Estrai H1, H2, Meta title/length, Meta description/length, Canonical e Meta robots da una lista di URL.")
     st.divider()
 
-    col1, col2 = st.columns([0.7, 0.3], gap="large")
+    col1_input, col2_options = st.columns([0.65, 0.35], gap="large")
 
-    with col1:
+    with col1_input:
         urls_input = st.text_area(
             "Incolla gli URL (uno per riga)",
-            height=250,
-            placeholder="https://esempio.com/pagina1\nhttps://esempio.com/pagina2\nhttps://esempio.com/pagina3",
-            label_visibility="collapsed" # Nasconde la label se il placeholder è sufficiente
+            height=280, # Aumentata altezza
+            placeholder="https://esempio.com/pagina1\nhttps://www.altroesempio.it/articolo\nhttp://miosito.org/contatti",
+            label_visibility="collapsed"
         )
 
-    # Definisci i campi possibili PRIMA, basandoti su una chiamata fittizia o una lista statica
-    # Questo evita di chiamare example.com ogni volta che la pagina si ricarica
     campi_disponibili = [
         "H1", "H2", "Meta title", "Meta title length",
         "Meta description", "Meta description length", "Canonical", "Meta robots"
@@ -110,7 +124,7 @@ def pagina_seo_extractor():
         "H1", "Meta title", "Meta description", "Canonical"
     ]
 
-    with col2:
+    with col2_options:
         st.subheader("Campi da Estrarre")
         campi_selezionati = st.multiselect(
             "Seleziona i campi:",
@@ -118,52 +132,61 @@ def pagina_seo_extractor():
             default=default_fields,
             label_visibility="collapsed"
         )
+        st.caption("Seleziona i dati SEO che desideri visualizzare nella tabella.")
 
     if st.button("🚀 Avvia Estrazione", type="primary", use_container_width=True):
-        urls = [u.strip() for u in urls_input.splitlines() if u.strip() and (u.startswith("http://") or u.startswith("https://"))]
+        urls_raw = [u.strip() for u in urls_input.splitlines() if u.strip()]
+        
+        urls_validi = []
+        for u_raw in urls_raw:
+            if not (u_raw.startswith("http://") or u_raw.startswith("https://")):
+                # Tenta di aggiungere https:// di default se lo schema manca,
+                # ma avvisa l'utente o gestisci in modo più sofisticato se necessario
+                urls_validi.append("https://" + u_raw)
+            else:
+                urls_validi.append(u_raw)
 
-        if not urls:
-            st.error("Inserisci almeno un URL valido (deve iniziare con http:// o https://).")
+        if not urls_validi:
+            st.error("Inserisci almeno un URL valido.")
             return
         if not campi_selezionati:
             st.error("Seleziona almeno un campo da estrarre.")
             return
 
-        progress_bar = st.progress(0, text="Analisi in corso...")
+        progress_bar = st.progress(0, text="Inizializzazione analisi...")
         results_list = []
-        total_urls = len(urls)
+        total_urls = len(urls_validi)
+        status_placeholder = st.empty()
 
-        status_placeholder = st.empty() # Per mostrare l'URL corrente in analisi
-
-        for i, url in enumerate(urls):
+        for i, url in enumerate(urls_validi):
+            percent_complete = (i + 1) / total_urls
             status_placeholder.text(f"Analizzando: {url} ({i+1}/{total_urls})")
+            progress_bar.progress(percent_complete, text=f"Analisi in corso... {int(percent_complete*100)}%")
+            
             info = estrai_info_seo(url)
-            # Seleziona solo i campi richiesti, più l'URL per riferimento
-            riga_risultati = {"URL": url}
+            riga_risultati = {"URL Originale": url} # Manteniamo l'URL processato
             for campo in campi_selezionati:
-                riga_risultati[campo] = info.get(campo, "N/D") # .get() per sicurezza
+                riga_risultati[campo] = info.get(campo, "N/D")
             results_list.append(riga_risultati)
-            progress_bar.progress((i + 1) / total_urls, text=f"Analisi in corso... ({i+1}/{total_urls})")
 
-        status_placeholder.empty() # Rimuove il testo dell'URL corrente
-        progress_bar.empty() # Rimuove la progress bar dopo il completamento
+        status_placeholder.empty()
+        progress_bar.empty()
 
         if results_list:
             st.success(f"Estrazione completata per {len(results_list)} URL.")
             st.balloons()
 
             df = pd.DataFrame(results_list)
-            # Riordina le colonne per avere "URL" per primo, seguito dai campi selezionati
-            colonne_ordinate = ["URL"] + [c for c in campi_selezionati if c in df.columns]
+            colonne_ordinate = ["URL Originale"] + [c for c in campi_selezionati if c in df.columns]
             df_display = df[colonne_ordinate]
 
             st.dataframe(df_display, use_container_width=True, hide_index=True)
 
-            # Download
             output = BytesIO()
+            # Usare 'with' assicura che lo writer sia chiuso correttamente
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df_display.to_excel(writer, index=False, sheet_name='Estrazione SEO')
-            excel_data = output.getvalue()
+            excel_data = output.getvalue() # .getvalue() è corretto per BytesIO
 
             st.download_button(
                 label="📥 Download Report (XLSX)",
@@ -173,11 +196,12 @@ def pagina_seo_extractor():
                 use_container_width=True
             )
         else:
-            st.warning("Nessun dato è stato estratto. Controlla gli URL o i log di errore.")
+            st.warning("Nessun dato è stato estratto. Controlla gli URL o i messaggi di avviso sopra.")
 
-def pagina_placeholder(tool_name="Tool Placeholder", icon="🛠️"):
+def pagina_placeholder(tool_name="Tool Placeholder", icon="🛠️", group_name="N/D"):
     """Pagina placeholder generica per altri tool."""
     st.title(f"{icon} {tool_name}")
+    st.subheader(f"Sezione: {group_name}")
     st.info(f"Questa è una pagina placeholder per il tool: **{tool_name}**.")
     st.write("Il contenuto specifico per questo tool verrà implementato qui.")
     st.image("https://via.placeholder.com/800x300.png?text=Contenuto+del+Tool+in+Arrivo",
@@ -187,30 +211,25 @@ def pagina_placeholder(tool_name="Tool Placeholder", icon="🛠️"):
 with st.sidebar:
     st.markdown(
         '<div class="sidebar-logo">'
-        '<img src="https://i.ibb.co/0yMG6kDs/logo.png" alt="Logo"/>'
+        '<img src="https://i.ibb.co/0yMG6kDs/logo.png" alt="Logo"/>' # Assicurati che questo URL sia valido e accessibile
         '</div>',
         unsafe_allow_html=True
     )
-    st.markdown("### Navigazione Principale")
-
-    # Definisci le pagine per st.navigation
-    # NOTA: st.navigation è disponibile da Streamlit 1.33+.
-    # Se hai una versione precedente, questo approccio non funzionerà
-    # e dovrai usare altri metodi come st.radio o st.selectbox per la navigazione.
-    # Assicurati che il tuo Streamlit sia aggiornato: pip install --upgrade streamlit
+    # st.markdown("### Navigazione Principale") # L'header del gruppo fa già da titolo
 
     pg = st.navigation(
         [
             st.Page(pagina_seo_extractor, title="SEO Extractor", icon="🔍", group="On-Page SEO"),
-            st.Page(lambda: pagina_placeholder("Struttura Dati & Schema"), title="Struttura Dati & Schema", icon="📝", group="On-Page SEO"),
-            st.Page(lambda: pagina_placeholder("Analisi Contenuto"), title="Analisi Contenuto", icon="📰", group="On-Page SEO"),
+            st.Page(lambda: pagina_placeholder("Struttura Dati", icon="📝", group_name="On-Page SEO"), title="Struttura Dati", icon="📝", group="On-Page SEO"),
+            st.Page(lambda: pagina_placeholder("Analisi Contenuto", icon="📰", group_name="On-Page SEO"), title="Analisi Contenuto", icon="📰", group="On-Page SEO"),
 
-            st.Page(lambda: pagina_placeholder("Verifica Robots.txt"), title="Verifica Robots.txt", icon="🤖", group="Technical SEO"),
-            st.Page(lambda: pagina_placeholder("Analisi Sitemap"), title="Analisi Sitemap", icon="🗺️", group="Technical SEO"),
-            st.Page(lambda: pagina_placeholder("Controllo Link Rotti"), title="Controllo Link Rotti", icon="🔗", group="Technical SEO"),
+            st.Page(lambda: pagina_placeholder("Verifica Robots.txt", icon="🤖", group_name="Technical SEO"), title="Verifica Robots.txt", icon="🤖", group="Technical SEO"),
+            st.Page(lambda: pagina_placeholder("Analisi Sitemap", icon="🗺️", group_name="Technical SEO"), title="Analisi Sitemap", icon="🗺️", group="Technical SEO"),
+            st.Page(lambda: pagina_placeholder("Controllo Redirect", icon="↪️", group_name="Technical SEO"), title="Controllo Redirect", icon="↪️", group="Technical SEO"),
 
-            st.Page(lambda: pagina_placeholder("Analisi Backlink"), title="Analisi Backlink", icon="🔄", group="Off-Page SEO"),
-            st.Page(lambda: pagina_placeholder("Ricerca Menzioni"), title="Ricerca Menzioni", icon="🗣️", group="Off-Page SEO"),
+
+            st.Page(lambda: pagina_placeholder("Analisi Backlink", icon="🔄", group_name="Off-Page SEO"), title="Analisi Backlink", icon="🔄", group="Off-Page SEO"),
+            st.Page(lambda: pagina_placeholder("Ricerca Menzioni", icon="🗣️", group_name="Off-Page SEO"), title="Ricerca Menzioni", icon="🗣️", group="Off-Page SEO"),
         ]
     )
 
